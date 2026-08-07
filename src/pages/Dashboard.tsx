@@ -61,16 +61,10 @@ export default function Dashboard() {
   useRealtime('oportunidades', () => loadData())
   useRealtime('lancamentos', () => loadData())
 
-  const totalInvestido = useMemo(() => {
-    return oportunidades
-      .filter((op) => op.status !== 'Em análise')
-      .reduce((acc, op) => {
-        const despesasOp = lancamentos
-          .filter((l) => l.oportunidade === op.id && l.tipo === 'Despesa')
-          .reduce((s, l) => s + l.valor, 0)
-        return acc + calcTotalInvestido(op, despesasOp)
-      }, 0)
-  }, [oportunidades, lancamentos])
+  const totalInvestido = useMemo(
+    () => lancamentos.filter((l) => l.tipo === 'Despesa').reduce((acc, l) => acc + l.valor, 0),
+    [lancamentos],
+  )
 
   const totalRealizado = useMemo(
     () =>

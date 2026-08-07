@@ -20,7 +20,7 @@ import { Plus, Pencil } from 'lucide-react'
 import { createLancamento, updateLancamento, Lancamento } from '@/services/lancamentos'
 import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
-import { CATEGORY_DESCRIPTIONS, RECEITA_DESCRIPTIONS } from '@/lib/expense-categories'
+import { CATEGORY_DESCRIPTIONS } from '@/lib/expense-categories'
 
 const CATEGORIAS = ['Aquisição', 'Tributos', 'Desocupação', 'Mensais', 'Venda'] as const
 
@@ -50,19 +50,8 @@ export function LancamentoFormModal({
   const { toast } = useToast()
 
   const descriptionOptions = useMemo(() => {
-    if (tipo === 'Receita') {
-      return RECEITA_DESCRIPTIONS
-    }
     return CATEGORY_DESCRIPTIONS[categoria as keyof typeof CATEGORY_DESCRIPTIONS] || []
-  }, [tipo, categoria])
-
-  const currentDescriptionOptions = useMemo(() => {
-    const options = [...descriptionOptions]
-    if (descricao && !options.includes(descricao)) {
-      options.unshift(descricao)
-    }
-    return options
-  }, [descriptionOptions, descricao])
+  }, [categoria])
 
   useEffect(() => {
     if (open && editLancamento) {
@@ -221,9 +210,9 @@ export function LancamentoFormModal({
                 <SelectValue placeholder="Selecione a descrição" />
               </SelectTrigger>
               <SelectContent>
-                {currentDescriptionOptions.map((desc) => (
+                {descriptionOptions.map((desc) => (
                   <SelectItem key={desc} value={desc}>
-                    {desc.charAt(0).toUpperCase() + desc.slice(1)}
+                    {desc}
                   </SelectItem>
                 ))}
               </SelectContent>

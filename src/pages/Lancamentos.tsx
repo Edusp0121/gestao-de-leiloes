@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -16,6 +16,12 @@ import { formatBRL, formatDate } from '@/lib/formatters'
 import { LancamentoFormModal } from '@/components/LancamentoFormModal'
 import { useToast } from '@/hooks/use-toast'
 import { useRealtime } from '@/hooks/use-realtime'
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts'
+import {
+  EXPENSE_CATEGORIES,
+  getEstimatedCostsByCategory,
+  getRealCostsByCategory,
+} from '@/lib/expense-categories'
 
 export default function Lancamentos() {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([])
@@ -57,6 +63,25 @@ export default function Lancamentos() {
     .filter((l) => l.tipo === 'Receita')
     .reduce((acc, l) => acc + l.valor, 0)
 
+  const compChartData = useMemo(() => {
+    const estimatedTotals = EXPENSE_CATEGORIES.reduce(
+      (acc, cat) => ({ ...acc, [cat]: 0 }),
+      {} as Record<string, number>,
+    )
+    oportunidades.forEach((op) => {
+      const costs = getEstimatedCostsByCategory(op)
+      EXPENSE_CATEGORIES.forEach((cat) => {
+        estimatedTotals[cat] += costs[cat]
+      })
+    })
+    const realCosts = getRealCostsByCategory(lancamentos)
+    return EXPENSE_CATEGORIES.map((cat) => ({
+      name: cat,
+      Estimado: Math.round(estimatedTotals[cat] * 100) / 100,
+      Real: Math.round(realCosts[cat] * 100) / 100,
+    }))
+  }, [oportunidades, lancamentos])
+
   if (loading) {
     return <div className="py-12 text-center text-[#7A6A5A]">Carregando lançamentos...</div>
   }
@@ -93,6 +118,29 @@ export default function Lancamentos() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-[#EDE4D8]">
+        <CardHeader>
+          <CardTitle className="text-base font-bold text-[#5C3A21]">
+            Comparativo Estimado vs Real por Categoria
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={compChartData}>
+              <XAxis dataKey="name" stroke="#7A6A5A" fontSize={11} />
+              <YAxis
+                stroke="#7A6A5A"
+                fontSize={12}
+                tickFormatter={(v) => `R${(v / 1000).toFixed(0)}k`}
+              />
+              <Tooltip formatter={(val: number) => formatBRL(val)} />
+              <Bar dataKey="Estimado" fill="#8B5A2B" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Real" fill="#F97316" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
 
       <Card className="border-[#EDE4D8]">
         <CardHeader>

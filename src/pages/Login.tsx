@@ -33,7 +33,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-[#3D2314] via-[#5C3A21] to-[#EA580C]">
       <Card className="w-full max-w-md shadow-2xl border-none bg-white/95 backdrop-blur-md overflow-hidden rounded-2xl">
-        <div className="bg-[#2D1B0E] p-6 text-center border-b border-[#5C3A21]">
+        <div className="bg-[#FFF4E8] p-6 text-center border-b border-[#EDE4D8]">
           <div className="bg-white rounded-xl px-6 py-4 inline-block shadow-lg">
             <img
               src={logoImg}
