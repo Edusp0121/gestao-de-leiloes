@@ -21,6 +21,8 @@ import { createLancamento, updateLancamento, Lancamento } from '@/services/lanca
 import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
 
+const CATEGORIAS = ['Aquisição', 'Tributos', 'Desocupação', 'Mensais', 'Venda'] as const
+
 interface LancamentoFormModalProps {
   oportunidades: { id: string; nome: string }[]
   defaultOportunidadeId?: string
@@ -40,6 +42,7 @@ export function LancamentoFormModal({
   const [loading, setLoading] = useState(false)
   const [oportunidadeId, setOportunidadeId] = useState(defaultOportunidadeId || '')
   const [tipo, setTipo] = useState<'Despesa' | 'Receita'>('Despesa')
+  const [categoria, setCategoria] = useState<string>('Aquisição')
   const [descricao, setDescricao] = useState('')
   const [valor, setValor] = useState('')
   const [data, setData] = useState(new Date().toISOString().split('T')[0])
@@ -49,6 +52,9 @@ export function LancamentoFormModal({
     if (open && editLancamento) {
       setOportunidadeId(editLancamento.oportunidade)
       setTipo(editLancamento.tipo)
+      setCategoria(
+        editLancamento.categoria || (editLancamento.tipo === 'Receita' ? 'Venda' : 'Aquisição'),
+      )
       setDescricao(editLancamento.descricao)
       setValor(String(editLancamento.valor))
       const rawDate = editLancamento.data || ''
@@ -58,11 +64,19 @@ export function LancamentoFormModal({
     } else if (open && !editLancamento) {
       setOportunidadeId(defaultOportunidadeId || '')
       setTipo('Despesa')
+      setCategoria('Aquisição')
       setDescricao('')
       setValor('')
       setData(new Date().toISOString().split('T')[0])
     }
   }, [open, editLancamento, defaultOportunidadeId])
+
+  const handleTipoChange = (v: 'Despesa' | 'Receita') => {
+    setTipo(v)
+    if (v === 'Receita') {
+      setCategoria('Venda')
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -82,6 +96,7 @@ export function LancamentoFormModal({
         descricao,
         valor: Number(valor),
         data: data ? `${data} 00:00:00.000Z` : new Date().toISOString(),
+        categoria: tipo === 'Despesa' ? categoria : 'Venda',
       }
       if (editLancamento) {
         await updateLancamento(editLancamento.id, payload)
@@ -142,7 +157,10 @@ export function LancamentoFormModal({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label>Tipo</Label>
-              <Select value={tipo} onValueChange={(v) => setTipo(v as 'Despesa' | 'Receita')}>
+              <Select
+                value={tipo}
+                onValueChange={(v) => handleTipoChange(v as 'Despesa' | 'Receita')}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -157,6 +175,23 @@ export function LancamentoFormModal({
               <Input type="date" value={data} onChange={(e) => setData(e.target.value)} />
             </div>
           </div>
+          {tipo === 'Despesa' && (
+            <div className="space-y-2">
+              <Label>Categoria</Label>
+              <Select value={categoria} onValueChange={setCategoria}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIAS.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-2">
             <Label>Descrição</Label>
             <Input

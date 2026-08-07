@@ -34,11 +34,11 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-[#3D2314] via-[#5C3A21] to-[#EA580C]">
       <Card className="w-full max-w-md shadow-2xl border-none bg-white/95 backdrop-blur-md overflow-hidden rounded-2xl">
         <div className="bg-[#2D1B0E] p-6 text-center border-b border-[#5C3A21]">
-          <div className="bg-white rounded-xl p-3 inline-block">
+          <div className="bg-white rounded-xl px-6 py-4 inline-block shadow-lg">
             <img
               src={logoImg}
               alt="Dou-lhe Três - Assessoria em Leilões Imobiliários"
-              className="h-28 w-auto mx-auto object-contain"
+              className="h-24 w-auto mx-auto object-contain max-w-[220px]"
             />
           </div>
         </div>

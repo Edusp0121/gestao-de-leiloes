@@ -23,11 +23,11 @@ export function Sidebar({ onItemClick }: SidebarProps) {
     <aside className="w-full md:w-[260px] bg-[#2D1B0E] text-white flex flex-col h-full min-h-screen shadow-xl">
       <div className="p-5 flex flex-col items-center justify-center border-b border-[#5C3A21] bg-[#22130A]">
         <Link to="/" onClick={onItemClick} className="block transition-transform hover:scale-105">
-          <div className="bg-white rounded-lg p-2 inline-block">
+          <div className="bg-white rounded-lg px-4 py-3 inline-block shadow-md">
             <img
               src={logoImg}
               alt="Dou-lhe Três - Assessoria em Leilões Imobiliários"
-              className="h-20 w-auto object-contain"
+              className="h-16 w-auto object-contain max-w-[180px]"
             />
           </div>
         </Link>

@@ -70,3 +70,20 @@ export function calculateMetrics(inputs: CalculatorInputs) {
     lance_teto: Math.round(lanceTeto * 100) / 100,
   }
 }
+
+export function calcTotalInvestido(
+  op: {
+    valor_arrematacao?: number | null
+    saldo_devedor?: number | null
+    parcelas_pagas?: number | null
+    valor_parcela_mensal?: number | null
+  },
+  despesas: number,
+): number {
+  const valorArrematacao = Number(op.valor_arrematacao) || 0
+  const saldoDevedor = Number(op.saldo_devedor) || 0
+  const parcelasPagas = Number(op.parcelas_pagas) || 0
+  const valorParcela = Number(op.valor_parcela_mensal) || 0
+  const entrada = Math.max(0, valorArrematacao - saldoDevedor - parcelasPagas * valorParcela)
+  return Math.round((entrada + parcelasPagas * valorParcela + despesas) * 100) / 100
+}

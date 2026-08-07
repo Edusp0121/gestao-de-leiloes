@@ -8,6 +8,7 @@ export interface Lancamento {
   descricao: string
   valor: number
   data?: string
+  categoria?: string
   created: string
   updated: string
   expand?: {

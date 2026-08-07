@@ -36,6 +36,7 @@ import {
   Tooltip,
 } from 'recharts'
 import { EXPENSE_CATEGORIES, categorizeExpense } from '@/lib/expense-categories'
+import { calcTotalInvestido } from '@/lib/calculator-utils'
 
 export default function Dashboard() {
   const [oportunidades, setOportunidades] = useState<Oportunidade[]>([])
@@ -67,7 +68,7 @@ export default function Dashboard() {
         const despesasOp = lancamentos
           .filter((l) => l.oportunidade === op.id && l.tipo === 'Despesa')
           .reduce((s, l) => s + l.valor, 0)
-        return acc + (op.valor_arrematacao || 0) + despesasOp
+        return acc + calcTotalInvestido(op, despesasOp)
       }, 0)
   }, [oportunidades, lancamentos])
 
@@ -111,7 +112,8 @@ export default function Dashboard() {
     const catMap: Record<string, number> = {}
     EXPENSE_CATEGORIES.forEach((cat) => (catMap[cat] = 0))
     filtered.forEach((l) => {
-      catMap[categorizeExpense(l.descricao)] += l.valor
+      const cat = (l.categoria as string) || categorizeExpense(l.descricao)
+      if (catMap[cat] !== undefined) catMap[cat] += l.valor
     })
     return Object.entries(catMap)
       .filter(([, value]) => value > 0)
@@ -155,7 +157,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-[#5C3A21]">{formatBRL(totalInvestido)}</div>
-            <p className="text-xs text-[#7A6A5A] mt-1">Arrematações + Despesas</p>
+            <p className="text-xs text-[#7A6A5A] mt-1">Entrada + Parcelas + Despesas</p>
           </CardContent>
         </Card>
 
@@ -344,7 +346,7 @@ export default function Dashboard() {
                     const despesasOp = lancamentos
                       .filter((l) => l.oportunidade === op.id && l.tipo === 'Despesa')
                       .reduce((acc, l) => acc + l.valor, 0)
-                    const totalGasto = (op.valor_arrematacao || 0) + despesasOp
+                    const totalGasto = calcTotalInvestido(op, despesasOp)
                     return (
                       <TableRow
                         key={op.id}

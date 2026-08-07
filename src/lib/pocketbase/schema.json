@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-07T15:45:14.220Z",
+  "generatedAt": "2026-08-07T20:14:41.480Z",
   "collections": [
     {
       "name": "users",
@@ -376,6 +376,13 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "categoria",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Aquisição", "Tributos", "Desocupação", "Mensais", "Venda"]
         }
       ],
       "indexes": [

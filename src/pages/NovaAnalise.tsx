@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
 import { formatBRL, formatPercent } from '@/lib/formatters'
 import { FileUp, Calculator } from 'lucide-react'
+import { calculateInstallment, calculateSaldoDevedor, FinancingParams } from '@/lib/financing-utils'
 
 const AGENTES = ['Caixa', 'Bradesco', 'Itaú', 'Santander', 'Emgea', 'Direto', 'Outros']
 
@@ -53,7 +54,7 @@ export default function NovaAnalise() {
     aliquota_reajuste: 0,
     valor_parcela_mensal: 15127.5,
     saldo_devedor: 326497.82,
-    parcelas_pagas: 157194.4,
+    parcelas_pagas: 3,
     ir_percent: 15,
   })
 
@@ -61,22 +62,34 @@ export default function NovaAnalise() {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
-  const computed = calculateMetrics({
-    valor_mercado: Number(form.valor_mercado),
-    valor_arrematacao: Number(form.valor_arrematacao),
-    desagio_venda: Number(form.desagio_venda),
-    tempo_estimado_venda_meses: Number(form.tempo_estimado_venda_meses),
-    itbi_percent: Number(form.itbi_percent),
-    comissao_leiloeiro_percent: Number(form.comissao_leiloeiro_percent),
-    comissao_corretor_percent: Number(form.comissao_corretor_percent),
-    escritura: Number(form.escritura),
-    registro: Number(form.registro),
-    averbacao: Number(form.averbacao),
-    reforma_prevista: Number(form.reforma_prevista),
-    assessoria_juridica: Number(form.assessoria_juridica),
-    condominio_iptu_mensal: Number(form.condominio_iptu_mensal),
-    ir_percent: Number(form.ir_percent),
-  })
+  const computed = {
+    ...calculateMetrics({
+      valor_mercado: Number(form.valor_mercado),
+      valor_arrematacao: Number(form.valor_arrematacao),
+      desagio_venda: Number(form.desagio_venda),
+      tempo_estimado_venda_meses: Number(form.tempo_estimado_venda_meses),
+      itbi_percent: Number(form.itbi_percent),
+      comissao_leiloeiro_percent: Number(form.comissao_leiloeiro_percent),
+      comissao_corretor_percent: Number(form.comissao_corretor_percent),
+      escritura: Number(form.escritura),
+      registro: Number(form.registro),
+      averbacao: Number(form.averbacao),
+      reforma_prevista: Number(form.reforma_prevista),
+      assessoria_juridica: Number(form.assessoria_juridica),
+      condominio_iptu_mensal: Number(form.condominio_iptu_mensal),
+      ir_percent: Number(form.ir_percent),
+    }),
+  }
+
+  const financingParams: FinancingParams = {
+    principal: Number(form.valor_arrematacao),
+    annualRate: Number(form.taxa_juros_financiamento),
+    termMonths: Number(form.tempo_estimado_venda_meses),
+    paymentsMade: Number(form.parcelas_pagas),
+    method: form.modalidade_financiamento === 'PRICE' ? 'PRICE' : 'SAC',
+  }
+  computed.valor_parcela_mensal = Math.round(calculateInstallment(financingParams) * 100) / 100
+  computed.saldo_devedor = Math.round(calculateSaldoDevedor(financingParams) * 100) / 100
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

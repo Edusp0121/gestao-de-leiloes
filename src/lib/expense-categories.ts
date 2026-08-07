@@ -47,16 +47,16 @@ export function getEstimatedCostsByCategory(op: {
   const comCorretor =
     (op.valor_venda_com_desconto || 0) * ((op.comissao_corretor_percent || 0) / 100)
   return {
-    Aquisição: arrem + comLeiloeiro + cartorio + (op.reforma_prevista || 0),
-    Tributos: itbi,
-    Desocupação: op.assessoria_juridica || 0,
-    Mensais: mensal,
+    Aquisição: arrem + comLeiloeiro,
+    Tributos: itbi + cartorio,
+    Desocupação: 0,
+    Mensais: mensal + (op.reforma_prevista || 0) + (op.assessoria_juridica || 0),
     Venda: comCorretor,
   }
 }
 
 export function getRealCostsByCategory(
-  lancamentos: { tipo: string; descricao: string; valor: number }[],
+  lancamentos: { tipo: string; descricao: string; valor: number; categoria?: string }[],
 ): Record<ExpenseCategory, number> {
   const result = EXPENSE_CATEGORIES.reduce(
     (acc, cat) => ({ ...acc, [cat]: 0 }),
@@ -65,7 +65,8 @@ export function getRealCostsByCategory(
   lancamentos
     .filter((l) => l.tipo === 'Despesa')
     .forEach((l) => {
-      result[categorizeExpense(l.descricao)] += l.valor
+      const cat = (l.categoria as ExpenseCategory) || categorizeExpense(l.descricao)
+      result[cat] += l.valor
     })
   return result
 }
