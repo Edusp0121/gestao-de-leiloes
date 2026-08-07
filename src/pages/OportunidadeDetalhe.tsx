@@ -78,6 +78,14 @@ export default function OportunidadeDetalhe() {
     }
   }, [op?.id])
 
+  const filteredLancamentos = useMemo(() => {
+    if (categoryFilter === 'Todos') return lancamentos
+    return lancamentos.filter((l) => {
+      const cat = (l.categoria as ExpenseCategory) || categorizeExpense(l.descricao)
+      return cat === categoryFilter
+    })
+  }, [lancamentos, categoryFilter])
+
   if (loading || !op) {
     return <div className="py-12 text-center text-[#7A6A5A]">Carregando detalhes...</div>
   }
@@ -122,14 +130,6 @@ export default function OportunidadeDetalhe() {
   }
   const calculatedInstallment = calculateInstallment(financingParams)
   const calculatedSaldoDevedor = calculateSaldoDevedor(financingParams)
-
-  const filteredLancamentos = useMemo(() => {
-    if (categoryFilter === 'Todos') return lancamentos
-    return lancamentos.filter((l) => {
-      const cat = (l.categoria as ExpenseCategory) || categorizeExpense(l.descricao)
-      return cat === categoryFilter
-    })
-  }, [lancamentos, categoryFilter])
 
   return (
     <div className="space-y-6">
