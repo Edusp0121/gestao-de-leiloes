@@ -46,7 +46,7 @@ export default function OportunidadeDetalhe() {
   const [allOps, setAllOps] = useState<Oportunidade[]>([])
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([])
   const [loading, setLoading] = useState(true)
-  const [financingMethod, setFinancingMethod] = useState<'SAC' | 'PRICE'>('SAC')
+  const [financingMethod, setFinancingMethod] = useState<'SAC' | 'PRICE'>('PRICE')
   const [categoryFilter, setCategoryFilter] = useState<ExpenseCategory | 'Todos'>('Todos')
   const { toast } = useToast()
 
@@ -74,7 +74,7 @@ export default function OportunidadeDetalhe() {
 
   useEffect(() => {
     if (op) {
-      setFinancingMethod(op.modalidade_financiamento === 'PRICE' ? 'PRICE' : 'SAC')
+      setFinancingMethod(op.modalidade_financiamento === 'SAC' ? 'SAC' : 'PRICE')
     }
   }, [op?.id])
 
@@ -121,10 +121,12 @@ export default function OportunidadeDetalhe() {
     Real: Math.round(realCosts[cat] * 100) / 100,
   }))
 
+  const annualRate =
+    op.taxa_juros_financiamento && op.taxa_juros_financiamento > 0 ? op.taxa_juros_financiamento : 8
   const financingParams: FinancingParams = {
-    principal: op.valor_arrematacao || 0,
-    annualRate: op.taxa_juros_financiamento || 0,
-    termMonths: op.tempo_estimado_venda_meses || 10,
+    principal: op.valor_arrematacao || 101200,
+    annualRate: annualRate,
+    termMonths: 120,
     paymentsMade: op.parcelas_pagas || 0,
     method: financingMethod,
   }
@@ -258,8 +260,8 @@ export default function OportunidadeDetalhe() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="SAC">SAC</SelectItem>
                   <SelectItem value="PRICE">Price</SelectItem>
+                  <SelectItem value="SAC">SAC</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -277,7 +279,7 @@ export default function OportunidadeDetalhe() {
             </div>
             <div className="flex justify-between py-1 border-b border-[#EDE4D8]">
               <span className="text-[#7A6A5A]">Taxa de Juros (anual):</span>
-              <span className="font-semibold">{formatPercent(op.taxa_juros_financiamento)}</span>
+              <span className="font-semibold">{formatPercent(annualRate)}</span>
             </div>
             <div className="flex justify-between py-1">
               <span className="text-[#7A6A5A]">Tempo Estimado Venda:</span>

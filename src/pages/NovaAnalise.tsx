@@ -35,8 +35,8 @@ export default function NovaAnalise() {
     data_aquisicao: new Date().toISOString().split('T')[0],
     status: 'Em análise' as 'Em análise' | 'Arrematada' | 'Em andamento' | 'Vendida',
     desagio_venda: 10,
-    valor_mercado: 2400000,
-    valor_arrematacao: 600000,
+    valor_mercado: 240000,
+    valor_arrematacao: 101200,
     tempo_estimado_venda_meses: 10,
     indice_correcao_medio_mensal: 0.17,
     itbi_percent: 3,
@@ -45,15 +45,15 @@ export default function NovaAnalise() {
     escritura: 0,
     registro: 0,
     averbacao: 0,
-    reforma_prevista: 30000,
-    assessoria_juridica: 0,
-    condominio_iptu_mensal: 3172.88,
-    modalidade_financiamento: 'SAC' as 'À Vista' | 'SAC' | 'PRICE',
+    reforma_prevista: 8000,
+    assessoria_juridica: 2626,
+    condominio_iptu_mensal: 1926,
+    modalidade_financiamento: 'PRICE' as 'À Vista' | 'SAC' | 'PRICE',
     banco_responsavel_financiamento: '',
-    taxa_juros_financiamento: 10.5,
+    taxa_juros_financiamento: 8,
     aliquota_reajuste: 0,
-    valor_parcela_mensal: 15127.5,
-    saldo_devedor: 326497.82,
+    valor_parcela_mensal: 1105.05,
+    saldo_devedor: 89576.33,
     parcelas_pagas: 3,
     ir_percent: 15,
   })
@@ -83,10 +83,10 @@ export default function NovaAnalise() {
 
   const financingParams: FinancingParams = {
     principal: Number(form.valor_arrematacao),
-    annualRate: Number(form.taxa_juros_financiamento),
-    termMonths: Number(form.tempo_estimado_venda_meses),
+    annualRate: Number(form.taxa_juros_financiamento) || 8,
+    termMonths: 120,
     paymentsMade: Number(form.parcelas_pagas),
-    method: form.modalidade_financiamento === 'PRICE' ? 'PRICE' : 'SAC',
+    method: form.modalidade_financiamento === 'SAC' ? 'SAC' : 'PRICE',
   }
   computed.valor_parcela_mensal = Math.round(calculateInstallment(financingParams) * 100) / 100
   computed.saldo_devedor = Math.round(calculateSaldoDevedor(financingParams) * 100) / 100
