@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Download, ArrowLeft, Trash2, Award } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -34,7 +34,10 @@ import {
   EXPENSE_CATEGORIES,
   getEstimatedCostsByCategory,
   getRealCostsByCategory,
+  categorizeExpense,
+  type ExpenseCategory,
 } from '@/lib/expense-categories'
+import { Filter } from 'lucide-react'
 import { calculateInstallment, calculateSaldoDevedor, FinancingParams } from '@/lib/financing-utils'
 
 export default function OportunidadeDetalhe() {
@@ -44,6 +47,7 @@ export default function OportunidadeDetalhe() {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([])
   const [loading, setLoading] = useState(true)
   const [financingMethod, setFinancingMethod] = useState<'SAC' | 'PRICE'>('SAC')
+  const [categoryFilter, setCategoryFilter] = useState<ExpenseCategory | 'Todos'>('Todos')
   const { toast } = useToast()
 
   const loadData = async () => {
@@ -118,6 +122,14 @@ export default function OportunidadeDetalhe() {
   }
   const calculatedInstallment = calculateInstallment(financingParams)
   const calculatedSaldoDevedor = calculateSaldoDevedor(financingParams)
+
+  const filteredLancamentos = useMemo(() => {
+    if (categoryFilter === 'Todos') return lancamentos
+    return lancamentos.filter((l) => {
+      const cat = (l.categoria as ExpenseCategory) || categorizeExpense(l.descricao)
+      return cat === categoryFilter
+    })
+  }, [lancamentos, categoryFilter])
 
   return (
     <div className="space-y-6">
@@ -276,13 +288,34 @@ export default function OportunidadeDetalhe() {
       </div>
 
       <Card className="border-[#EDE4D8]">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-3">
           <CardTitle className="text-base font-bold text-[#5C3A21]">
             Lançamentos da Oportunidade ({lancamentos.length})
           </CardTitle>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <Filter className="w-4 h-4 text-[#7A6A5A]" />
+              <Select
+                value={categoryFilter}
+                onValueChange={(v) => setCategoryFilter(v as ExpenseCategory | 'Todos')}
+              >
+                <SelectTrigger className="w-40 h-9 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Todos">Todos</SelectItem>
+                  {EXPENSE_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          {lancamentos.length === 0 ? (
+          {filteredLancamentos.length === 0 ? (
             <p className="text-sm text-[#7A6A5A] text-center py-6">
               Nenhuma despesa ou receita lançada.
             </p>
@@ -298,7 +331,7 @@ export default function OportunidadeDetalhe() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {lancamentos.map((l) => (
+                {filteredLancamentos.map((l) => (
                   <TableRow key={l.id} className="border-[#EDE4D8]">
                     <TableCell className="text-xs text-[#7A6A5A]">{formatDate(l.data)}</TableCell>
                     <TableCell>
