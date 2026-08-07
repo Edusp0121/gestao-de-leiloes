@@ -34,4 +34,7 @@ export const createLancamento = (data: Partial<Lancamento>) => {
   })
 }
 
+export const updateLancamento = (id: string, data: Partial<Lancamento>) =>
+  pb.collection('lancamentos').update<Lancamento>(id, data)
+
 export const deleteLancamento = (id: string) => pb.collection('lancamentos').delete(id)

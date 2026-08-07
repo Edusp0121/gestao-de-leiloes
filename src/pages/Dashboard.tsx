@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { DollarSign, TrendingUp, Percent, Building2, PlusCircle, ArrowUpRight } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,6 +11,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { getOportunidades, Oportunidade } from '@/services/oportunidades'
 import { getLancamentos, Lancamento } from '@/services/lancamentos'
 import { formatBRL, formatPercent, formatDateShort } from '@/lib/formatters'
@@ -28,11 +35,13 @@ import {
   Cell,
   Tooltip,
 } from 'recharts'
+import { EXPENSE_CATEGORIES, categorizeExpense } from '@/lib/expense-categories'
 
 export default function Dashboard() {
   const [oportunidades, setOportunidades] = useState<Oportunidade[]>([])
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([])
   const [loading, setLoading] = useState(true)
+  const [chartOpId, setChartOpId] = useState<string>('all')
 
   const loadData = async () => {
     try {
@@ -51,27 +60,42 @@ export default function Dashboard() {
   useRealtime('oportunidades', () => loadData())
   useRealtime('lancamentos', () => loadData())
 
-  const totalInvestido = oportunidades.reduce((acc, op) => {
-    const despesasOp = lancamentos
-      .filter((l) => l.oportunidade === op.id && l.tipo === 'Despesa')
-      .reduce((s, l) => s + l.valor, 0)
-    return acc + (op.valor_arrematacao || 0) + despesasOp
-  }, 0)
+  const totalInvestido = useMemo(() => {
+    return oportunidades
+      .filter((op) => op.status !== 'Em análise')
+      .reduce((acc, op) => {
+        const despesasOp = lancamentos
+          .filter((l) => l.oportunidade === op.id && l.tipo === 'Despesa')
+          .reduce((s, l) => s + l.valor, 0)
+        return acc + (op.valor_arrematacao || 0) + despesasOp
+      }, 0)
+  }, [oportunidades, lancamentos])
 
-  const totalRealizado = oportunidades
-    .filter((op) => op.status === 'Vendida')
-    .reduce((acc, op) => acc + (op.valor_venda_com_desconto || op.valor_mercado || 0), 0)
-
-  const retornoEstimadoTotal = oportunidades.reduce(
-    (acc, op) => acc + (op.retorno_estimado || op.maior_lucro_esperado || 0),
-    0,
+  const totalRealizado = useMemo(
+    () =>
+      oportunidades
+        .filter((op) => op.status === 'Vendida')
+        .reduce((acc, op) => acc + (op.valor_venda_com_desconto || op.valor_mercado || 0), 0),
+    [oportunidades],
   )
 
-  const roiMedio =
-    oportunidades.length > 0
-      ? oportunidades.reduce((acc, op) => acc + (op.roi_esperado_periodo || 0), 0) /
-        oportunidades.length
-      : 0
+  const retornoEstimadoTotal = useMemo(
+    () =>
+      oportunidades.reduce(
+        (acc, op) => acc + (op.retorno_estimado || op.maior_lucro_esperado || 0),
+        0,
+      ),
+    [oportunidades],
+  )
+
+  const roiMedio = useMemo(
+    () =>
+      oportunidades.length > 0
+        ? oportunidades.reduce((acc, op) => acc + (op.roi_esperado_periodo || 0), 0) /
+          oportunidades.length
+        : 0,
+    [oportunidades],
+  )
 
   const chartDataBar = oportunidades.map((op) => ({
     name: op.nome.length > 15 ? op.nome.slice(0, 15) + '...' : op.nome,
@@ -79,15 +103,21 @@ export default function Dashboard() {
     Retorno: op.retorno_estimado || op.maior_lucro_esperado || 0,
   }))
 
-  const expensesByCategoryMap: Record<string, number> = {}
-  lancamentos
-    .filter((l) => l.tipo === 'Despesa')
-    .forEach((l) => {
-      const cat = l.descricao.split(' ')[0] || 'Outros'
-      expensesByCategoryMap[cat] = (expensesByCategoryMap[cat] || 0) + l.valor
+  const pieData = useMemo(() => {
+    const filtered =
+      chartOpId === 'all'
+        ? lancamentos.filter((l) => l.tipo === 'Despesa')
+        : lancamentos.filter((l) => l.oportunidade === chartOpId && l.tipo === 'Despesa')
+    const catMap: Record<string, number> = {}
+    EXPENSE_CATEGORIES.forEach((cat) => (catMap[cat] = 0))
+    filtered.forEach((l) => {
+      catMap[categorizeExpense(l.descricao)] += l.valor
     })
+    return Object.entries(catMap)
+      .filter(([, value]) => value > 0)
+      .map(([name, value]) => ({ name, value }))
+  }, [lancamentos, chartOpId])
 
-  const pieData = Object.entries(expensesByCategoryMap).map(([name, value]) => ({ name, value }))
   const PIE_COLORS = ['#F97316', '#8B5A2B', '#D97706', '#FBBF24', '#5C3A21']
 
   if (loading) {
@@ -218,10 +248,23 @@ export default function Dashboard() {
         </Card>
 
         <Card className="border-[#EDE4D8]">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base font-bold text-[#5C3A21]">
               Composição de Despesas
             </CardTitle>
+            <Select value={chartOpId} onValueChange={setChartOpId}>
+              <SelectTrigger className="w-[140px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                {oportunidades.map((op) => (
+                  <SelectItem key={op.id} value={op.id}>
+                    {op.nome.length > 20 ? op.nome.slice(0, 20) + '...' : op.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </CardHeader>
           <CardContent className="h-72 flex items-center justify-center">
             {pieData.length > 0 ? (
@@ -302,7 +345,6 @@ export default function Dashboard() {
                       .filter((l) => l.oportunidade === op.id && l.tipo === 'Despesa')
                       .reduce((acc, l) => acc + l.valor, 0)
                     const totalGasto = (op.valor_arrematacao || 0) + despesasOp
-
                     return (
                       <TableRow
                         key={op.id}

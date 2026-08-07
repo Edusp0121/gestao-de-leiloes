@@ -15,7 +15,10 @@ import { createOportunidade } from '@/services/oportunidades'
 import { calculateMetrics } from '@/lib/calculator-utils'
 import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
+import { formatBRL, formatPercent } from '@/lib/formatters'
 import { FileUp, Calculator } from 'lucide-react'
+
+const AGENTES = ['Caixa', 'Bradesco', 'Itaú', 'Santander', 'Emgea', 'Direto', 'Outros']
 
 export default function NovaAnalise() {
   const navigate = useNavigate()
@@ -27,14 +30,14 @@ export default function NovaAnalise() {
     nome: '',
     endereco: '',
     tipo_leilao: 'Judicial' as 'Judicial' | 'Extrajudicial',
-    banco_selecionado: 'Caixa Leilão',
+    banco_selecionado: 'Caixa',
     data_aquisicao: new Date().toISOString().split('T')[0],
     status: 'Em análise' as 'Em análise' | 'Arrematada' | 'Em andamento' | 'Vendida',
     desagio_venda: 10,
     valor_mercado: 2400000,
     valor_arrematacao: 600000,
     tempo_estimado_venda_meses: 10,
-    indice_correcao_medio_mensal: 0.85,
+    indice_correcao_medio_mensal: 0.17,
     itbi_percent: 3,
     comissao_leiloeiro_percent: 5,
     comissao_corretor_percent: 6,
@@ -170,11 +173,22 @@ export default function NovaAnalise() {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Banco / Leiloeiro</Label>
-            <Input
+            <Label>Agente</Label>
+            <Select
               value={form.banco_selecionado}
-              onChange={(e) => handleChange('banco_selecionado', e.target.value)}
-            />
+              onValueChange={(v) => handleChange('banco_selecionado', v)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {AGENTES.map((ag) => (
+                  <SelectItem key={ag} value={ag}>
+                    {ag}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label>Data de Aquisição</Label>
@@ -262,7 +276,7 @@ export default function NovaAnalise() {
             />
           </div>
           <div className="space-y-2">
-            <Label>Índice Correção Média Mensal (%)</Label>
+            <Label>Índice Correção Média Mensal — TR (%)</Label>
             <Input
               type="number"
               step="0.01"
@@ -324,6 +338,14 @@ export default function NovaAnalise() {
               onChange={(e) => handleChange('condominio_iptu_mensal', e.target.value)}
             />
           </div>
+          <div className="space-y-2">
+            <Label>Assessoria Jurídica (R$)</Label>
+            <Input
+              type="number"
+              value={form.assessoria_juridica}
+              onChange={(e) => handleChange('assessoria_juridica', e.target.value)}
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -338,24 +360,24 @@ export default function NovaAnalise() {
           <div className="p-3 bg-white rounded-lg border border-[#EDE4D8]">
             <p className="text-xs text-[#7A6A5A]">Venda c/ Desconto</p>
             <p className="text-lg font-bold text-[#5C3A21]">
-              R$ {computed.valor_venda_com_desconto.toLocaleString('pt-BR')}
+              {formatBRL(computed.valor_venda_com_desconto)}
             </p>
           </div>
           <div className="p-3 bg-white rounded-lg border border-[#EDE4D8]">
             <p className="text-xs text-[#7A6A5A]">Lucro Esperado</p>
             <p className="text-lg font-bold text-[#16A34A]">
-              R$ {computed.maior_lucro_esperado.toLocaleString('pt-BR')}
+              {formatBRL(computed.maior_lucro_esperado)}
             </p>
           </div>
           <div className="p-3 bg-white rounded-lg border border-[#EDE4D8]">
             <p className="text-xs text-[#7A6A5A]">ROI no Período</p>
-            <p className="text-lg font-bold text-[#F97316]">{computed.roi_esperado_periodo}%</p>
+            <p className="text-lg font-bold text-[#F97316]">
+              {formatPercent(computed.roi_esperado_periodo)}
+            </p>
           </div>
           <div className="p-3 bg-white rounded-lg border border-[#EDE4D8]">
             <p className="text-xs text-[#7A6A5A]">Lance Teto Recomendado</p>
-            <p className="text-lg font-bold text-[#8B5A2B]">
-              R$ {computed.lance_teto.toLocaleString('pt-BR')}
-            </p>
+            <p className="text-lg font-bold text-[#8B5A2B]">{formatBRL(computed.lance_teto)}</p>
           </div>
         </CardContent>
       </Card>

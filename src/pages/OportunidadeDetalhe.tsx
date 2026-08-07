@@ -1,16 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import {
-  Download,
-  ArrowLeft,
-  Trash2,
-  Award,
-  DollarSign,
-  TrendingUp,
-  ShieldCheck,
-} from 'lucide-react'
+import { Download, ArrowLeft, Trash2, Award } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -31,6 +30,12 @@ import { StatusBadge } from '@/components/StatusBadge'
 import { LancamentoFormModal } from '@/components/LancamentoFormModal'
 import { useToast } from '@/hooks/use-toast'
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts'
+import {
+  EXPENSE_CATEGORIES,
+  getEstimatedCostsByCategory,
+  getRealCostsByCategory,
+} from '@/lib/expense-categories'
+import { calculateInstallment, calculateSaldoDevedor, FinancingParams } from '@/lib/financing-utils'
 
 export default function OportunidadeDetalhe() {
   const { id } = useParams<{ id: string }>()
@@ -38,6 +43,7 @@ export default function OportunidadeDetalhe() {
   const [allOps, setAllOps] = useState<Oportunidade[]>([])
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([])
   const [loading, setLoading] = useState(true)
+  const [financingMethod, setFinancingMethod] = useState<'SAC' | 'PRICE'>('SAC')
   const { toast } = useToast()
 
   const loadData = async () => {
@@ -61,6 +67,12 @@ export default function OportunidadeDetalhe() {
   useEffect(() => {
     loadData()
   }, [id])
+
+  useEffect(() => {
+    if (op) {
+      setFinancingMethod(op.modalidade_financiamento === 'PRICE' ? 'PRICE' : 'SAC')
+    }
+  }, [op?.id])
 
   if (loading || !op) {
     return <div className="py-12 text-center text-[#7A6A5A]">Carregando detalhes...</div>
@@ -90,15 +102,23 @@ export default function OportunidadeDetalhe() {
     }
   }
 
-  const compChartData = [
-    { name: 'Arrematação', Estimado: op.valor_arrematacao || 0, Real: op.valor_arrematacao || 0 },
-    { name: 'Reformas/Despesas', Estimado: op.reforma_prevista || 30000, Real: totalDespesasReal },
-    {
-      name: 'Retorno Líquido',
-      Estimado: op.retorno_estimado || 0,
-      Real: (op.valor_venda_com_desconto || 0) - totalInvestidoReal,
-    },
-  ]
+  const estimatedCosts = getEstimatedCostsByCategory(op)
+  const realCosts = getRealCostsByCategory(lancamentos)
+  const compChartData = EXPENSE_CATEGORIES.map((cat) => ({
+    name: cat,
+    Estimado: Math.round(estimatedCosts[cat] * 100) / 100,
+    Real: Math.round(realCosts[cat] * 100) / 100,
+  }))
+
+  const financingParams: FinancingParams = {
+    principal: op.valor_arrematacao || 0,
+    annualRate: op.taxa_juros_financiamento || 0,
+    termMonths: op.tempo_estimado_venda_meses || 10,
+    paymentsMade: op.parcelas_pagas || 0,
+    method: financingMethod,
+  }
+  const calculatedInstallment = calculateInstallment(financingParams)
+  const calculatedSaldoDevedor = calculateSaldoDevedor(financingParams)
 
   return (
     <div className="space-y-6">
@@ -121,7 +141,6 @@ export default function OportunidadeDetalhe() {
           </div>
           <p className="text-sm text-[#7A6A5A]">{op.endereco}</p>
         </div>
-
         <div className="flex items-center gap-2 flex-wrap">
           {relatorioUrl && (
             <a href={relatorioUrl} target="_blank" rel="noreferrer">
@@ -154,7 +173,6 @@ export default function OportunidadeDetalhe() {
             </p>
           </CardContent>
         </Card>
-
         <Card className="bg-white border-[#EDE4D8]">
           <CardContent className="pt-4">
             <p className="text-xs text-[#7A6A5A] uppercase font-semibold">
@@ -166,7 +184,6 @@ export default function OportunidadeDetalhe() {
             <p className="text-xs text-gray-500 mt-0.5">Deságio de {op.desagio_venda || 0}%</p>
           </CardContent>
         </Card>
-
         <Card className="bg-white border-[#EDE4D8]">
           <CardContent className="pt-4">
             <p className="text-xs text-[#7A6A5A] uppercase font-semibold">Retorno Estimado</p>
@@ -176,7 +193,6 @@ export default function OportunidadeDetalhe() {
             <p className="text-xs text-green-700 mt-0.5">Lucro esperado</p>
           </CardContent>
         </Card>
-
         <Card className="bg-white border-[#EDE4D8]">
           <CardContent className="pt-4">
             <p className="text-xs text-[#7A6A5A] uppercase font-semibold">ROI no Período / Anual</p>
@@ -194,13 +210,13 @@ export default function OportunidadeDetalhe() {
         <Card className="border-[#EDE4D8]">
           <CardHeader>
             <CardTitle className="text-base font-bold text-[#5C3A21]">
-              Comparativo Estimado vs Real
+              Comparativo Estimado vs Real por Categoria
             </CardTitle>
           </CardHeader>
           <CardContent className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={compChartData}>
-                <XAxis dataKey="name" stroke="#7A6A5A" fontSize={12} />
+                <XAxis dataKey="name" stroke="#7A6A5A" fontSize={11} />
                 <YAxis
                   stroke="#7A6A5A"
                   fontSize={12}
@@ -221,23 +237,36 @@ export default function OportunidadeDetalhe() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <div className="flex justify-between py-1 border-b border-[#EDE4D8]">
+            <div className="flex justify-between items-center py-1 border-b border-[#EDE4D8]">
               <span className="text-[#7A6A5A]">Modalidade:</span>
-              <span className="font-semibold text-[#2D1B0E]">
-                {op.modalidade_financiamento || 'À Vista'}
-              </span>
+              <Select
+                value={financingMethod}
+                onValueChange={(v) => setFinancingMethod(v as 'SAC' | 'PRICE')}
+              >
+                <SelectTrigger className="w-28 h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SAC">SAC</SelectItem>
+                  <SelectItem value="PRICE">Price</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex justify-between py-1 border-b border-[#EDE4D8]">
               <span className="text-[#7A6A5A]">Valor da Parcela Mensal:</span>
-              <span className="font-semibold">{formatBRL(op.valor_parcela_mensal)}</span>
+              <span className="font-semibold">{formatBRL(calculatedInstallment)}</span>
             </div>
             <div className="flex justify-between py-1 border-b border-[#EDE4D8]">
               <span className="text-[#7A6A5A]">Saldo Devedor Atual:</span>
-              <span className="font-semibold">{formatBRL(op.saldo_devedor)}</span>
+              <span className="font-semibold">{formatBRL(calculatedSaldoDevedor)}</span>
             </div>
             <div className="flex justify-between py-1 border-b border-[#EDE4D8]">
               <span className="text-[#7A6A5A]">Condomínio + IPTU Mensal:</span>
               <span className="font-semibold">{formatBRL(op.condominio_iptu_mensal)}</span>
+            </div>
+            <div className="flex justify-between py-1 border-b border-[#EDE4D8]">
+              <span className="text-[#7A6A5A]">Taxa de Juros (anual):</span>
+              <span className="font-semibold">{formatPercent(op.taxa_juros_financiamento)}</span>
             </div>
             <div className="flex justify-between py-1">
               <span className="text-[#7A6A5A]">Tempo Estimado Venda:</span>
@@ -266,7 +295,7 @@ export default function OportunidadeDetalhe() {
                   <TableHead>Tipo</TableHead>
                   <TableHead>Descrição</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
-                  <TableHead className="text-right">Ação</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -283,14 +312,21 @@ export default function OportunidadeDetalhe() {
                     <TableCell className="font-medium text-[#2D1B0E]">{l.descricao}</TableCell>
                     <TableCell className="text-right font-bold">{formatBRL(l.valor)}</TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-red-500 hover:bg-red-50"
-                        onClick={() => handleDeleteLancamento(l.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <LancamentoFormModal
+                          oportunidades={allOps}
+                          editLancamento={l}
+                          onSuccess={loadData}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-red-500 hover:bg-red-50"
+                          onClick={() => handleDeleteLancamento(l.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

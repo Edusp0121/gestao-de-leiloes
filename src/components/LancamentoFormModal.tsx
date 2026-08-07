@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -16,8 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus } from 'lucide-react'
-import { createLancamento } from '@/services/lancamentos'
+import { Plus, Pencil } from 'lucide-react'
+import { createLancamento, updateLancamento, Lancamento } from '@/services/lancamentos'
 import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
 
@@ -26,6 +26,7 @@ interface LancamentoFormModalProps {
   defaultOportunidadeId?: string
   onSuccess?: () => void
   triggerText?: string
+  editLancamento?: Lancamento | null
 }
 
 export function LancamentoFormModal({
@@ -33,6 +34,7 @@ export function LancamentoFormModal({
   defaultOportunidadeId,
   onSuccess,
   triggerText = 'Novo Lançamento',
+  editLancamento = null,
 }: LancamentoFormModalProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -42,6 +44,25 @@ export function LancamentoFormModal({
   const [valor, setValor] = useState('')
   const [data, setData] = useState(new Date().toISOString().split('T')[0])
   const { toast } = useToast()
+
+  useEffect(() => {
+    if (open && editLancamento) {
+      setOportunidadeId(editLancamento.oportunidade)
+      setTipo(editLancamento.tipo)
+      setDescricao(editLancamento.descricao)
+      setValor(String(editLancamento.valor))
+      const rawDate = editLancamento.data || ''
+      setData(
+        rawDate ? rawDate.split(' ')[0].split('T')[0] : new Date().toISOString().split('T')[0],
+      )
+    } else if (open && !editLancamento) {
+      setOportunidadeId(defaultOportunidadeId || '')
+      setTipo('Despesa')
+      setDescricao('')
+      setValor('')
+      setData(new Date().toISOString().split('T')[0])
+    }
+  }, [open, editLancamento, defaultOportunidadeId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -55,16 +76,20 @@ export function LancamentoFormModal({
     }
     setLoading(true)
     try {
-      await createLancamento({
+      const payload = {
         oportunidade: oportunidadeId,
         tipo,
         descricao,
         valor: Number(valor),
         data: data ? `${data} 00:00:00.000Z` : new Date().toISOString(),
-      })
-      toast({ title: 'Sucesso', description: 'Lançamento registrado com sucesso!' })
-      setDescricao('')
-      setValor('')
+      }
+      if (editLancamento) {
+        await updateLancamento(editLancamento.id, payload)
+        toast({ title: 'Sucesso', description: 'Lançamento atualizado com sucesso!' })
+      } else {
+        await createLancamento(payload)
+        toast({ title: 'Sucesso', description: 'Lançamento registrado com sucesso!' })
+      }
       setOpen(false)
       onSuccess?.()
     } catch (err) {
@@ -81,14 +106,22 @@ export function LancamentoFormModal({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-[#F97316] hover:bg-[#EA580C] text-white gap-2 font-medium">
-          <Plus className="w-4 h-4" />
-          {triggerText}
-        </Button>
+        {editLancamento ? (
+          <Button variant="ghost" size="icon" className="text-blue-500 hover:bg-blue-50">
+            <Pencil className="w-4 h-4" />
+          </Button>
+        ) : (
+          <Button className="bg-[#F97316] hover:bg-[#EA580C] text-white gap-2 font-medium">
+            <Plus className="w-4 h-4" />
+            {triggerText}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="text-[#5C3A21]">Registrar Lançamento</DialogTitle>
+          <DialogTitle className="text-[#5C3A21]">
+            {editLancamento ? 'Editar Lançamento' : 'Registrar Lançamento'}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-2">
           <div className="space-y-2">
@@ -106,7 +139,6 @@ export function LancamentoFormModal({
               </SelectContent>
             </Select>
           </div>
-
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label>Tipo</Label>
@@ -125,7 +157,6 @@ export function LancamentoFormModal({
               <Input type="date" value={data} onChange={(e) => setData(e.target.value)} />
             </div>
           </div>
-
           <div className="space-y-2">
             <Label>Descrição</Label>
             <Input
@@ -134,7 +165,6 @@ export function LancamentoFormModal({
               onChange={(e) => setDescricao(e.target.value)}
             />
           </div>
-
           <div className="space-y-2">
             <Label>Valor (R$)</Label>
             <Input
@@ -145,7 +175,6 @@ export function LancamentoFormModal({
               onChange={(e) => setValor(e.target.value)}
             />
           </div>
-
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancelar
