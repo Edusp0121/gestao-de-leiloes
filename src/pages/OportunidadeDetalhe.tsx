@@ -117,8 +117,8 @@ export default function OportunidadeDetalhe() {
   const realCosts = getRealCostsByCategory(lancamentos)
   const compChartData = EXPENSE_CATEGORIES.map((cat) => ({
     name: cat,
-    Estimado: Math.round(estimatedCosts[cat] * 100) / 100,
-    Real: Math.round(realCosts[cat] * 100) / 100,
+    Estimado: Math.round((estimatedCosts[cat] ?? 0) * 100) / 100,
+    Real: Math.round((realCosts[cat] ?? 0) * 100) / 100,
   }))
 
   const annualRate =

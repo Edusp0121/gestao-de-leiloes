@@ -22,7 +22,7 @@ export function calculateInstallment(params: FinancingParams): number {
     entryPercent = 10,
   } = params
 
-  const term = termMonths > 0 && termMonths !== 10 && termMonths !== 16 ? termMonths : 120
+  const term = termMonths && termMonths > 0 ? termMonths : 120
   const monthlyRate = calculateMonthlyRate(annualRate)
 
   // Financed principal: minus entry (default 10% entry)
@@ -49,7 +49,7 @@ export function calculateSaldoDevedor(params: FinancingParams): number {
     entryPercent = 10,
   } = params
 
-  const term = termMonths > 0 && termMonths !== 10 && termMonths !== 16 ? termMonths : 120
+  const term = termMonths && termMonths > 0 ? termMonths : 120
   if (paymentsMade >= term) return 0
 
   const monthlyRate = calculateMonthlyRate(annualRate)

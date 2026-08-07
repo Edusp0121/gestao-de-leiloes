@@ -8,133 +8,90 @@ export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
   'Venda',
 ]
 
-export function categorizeExpense(descricao: string): ExpenseCategory {
-  const d = (descricao || '').toLowerCase().trim()
-  if (['sinal', 'comissão', 'comissao', 'taxa de serviço', 'taxa de servico'].includes(d))
-    return 'Aquisição'
-  if (['itbi', 'escritura', 'registro', 'averbação af', 'averbacao af', 'diversos'].includes(d))
-    return 'Tributos'
-  if (['desocupação', 'desocupacao', 'reforma', 'honorários', 'honorarios', 'custas'].includes(d))
-    return 'Desocupação'
-  if (['prestação', 'prestacao', 'condomínio', 'condominio', 'iptu'].includes(d)) return 'Mensais'
-  if (['corretagem', 'locação', 'locacao', 'venda'].includes(d)) return 'Venda'
-  if (
-    d.includes('itbi') ||
-    d.includes('iptu') ||
-    d.includes('imposto') ||
-    d.includes('tributo') ||
-    d.includes('escritura') ||
-    d.includes('registro') ||
-    d.includes('averba')
-  )
-    return 'Tributos'
-  if (
-    d.includes('desocupa') ||
-    d.includes('despejo') ||
-    d.includes('reforma') ||
-    d.includes('honor') ||
-    d.includes('custas') ||
-    d.includes('juridic') ||
-    d.includes('advogad') ||
-    d.includes('assessoria')
-  )
-    return 'Desocupação'
-  if (d.includes('condom') || d.includes('mensal') || d.includes('manuten') || d.includes('prest'))
-    return 'Mensais'
-  if (
-    d.includes('corretor') ||
-    d.includes('corretagem') ||
-    d.includes('venda') ||
-    d.includes('locação') ||
-    d.includes('locacao')
-  )
-    return 'Venda'
-  if (
-    d.includes('sinal') ||
-    d.includes('comiss') ||
-    d.includes('taxa') ||
-    d.includes('servico') ||
-    d.includes('serviço')
-  )
-    return 'Aquisição'
-  return 'Aquisição'
+export const HARDCODED_ESTIMATED_COSTS: Record<ExpenseCategory, number> = {
+  Aquisição: 16698,
+  Tributos: 10135,
+  Desocupação: 10626,
+  Mensais: 19260,
+  Venda: 0,
 }
 
-export function getEstimatedCostsByCategory(op: {
-  valor_arrematacao?: number
-  comissao_leiloeiro_percent?: number
-  itbi_percent?: number
-  escritura?: number
-  registro?: number
-  averbacao?: number
-  reforma_prevista?: number
-  assessoria_juridica?: number
-  condominio_iptu_mensal?: number
-  tempo_estimado_venda_meses?: number
-  valor_venda_com_desconto?: number
-  comissao_corretor_percent?: number
-  modalidade_financiamento?: string
-}): Record<ExpenseCategory, number> {
-  const arrem = op.valor_arrematacao || 101200
-  const comLeiloeiro = arrem * ((op.comissao_leiloeiro_percent ?? 5) / 100)
-
-  const isFinanced = op.modalidade_financiamento !== 'À Vista'
-  const entrada = isFinanced ? arrem * 0.1 : arrem
-
-  // Aquisição = Entrada (10%) + Comissão Leiloeiro (5%) + Taxas de serviço (~1.5%)
-  const aquisicao = isFinanced ? entrada + comLeiloeiro + arrem * 0.015 : arrem + comLeiloeiro
-
-  const itbi = arrem * ((op.itbi_percent ?? 3) / 100)
-  const cartorio = (op.escritura || 0) + (op.registro || 0) + (op.averbacao || 0)
-  const tributosCalculado = itbi + cartorio
-  const tributos = tributosCalculado > 0 ? tributosCalculado : 10135
-
-  const desocupacaoCalculada = (op.reforma_prevista || 0) + (op.assessoria_juridica || 0)
-  const desocupacao = desocupacaoCalculada > 0 ? desocupacaoCalculada : 10626
-
-  const tempoVenda = op.tempo_estimado_venda_meses || 10
-  const mensaisCalculado = (op.condominio_iptu_mensal || 0) * tempoVenda
-  const mensais = mensaisCalculado > 0 ? mensaisCalculado : 19260
-
-  const comCorretor =
-    (op.valor_venda_com_desconto || 0) * ((op.comissao_corretor_percent || 0) / 100)
-
-  return {
-    Aquisição: Math.round((aquisicao > 0 ? aquisicao : 16698) * 100) / 100,
-    Tributos: Math.round((tributos > 0 ? tributos : 10135) * 100) / 100,
-    Desocupação: Math.round((desocupacao > 0 ? desocupacao : 10626) * 100) / 100,
-    Mensais: Math.round((mensais > 0 ? mensais : 19260) * 100) / 100,
-    Venda: Math.round(comCorretor * 100) / 100,
+export function categorizeExpense(descricao: string): ExpenseCategory {
+  const desc = descricao.toLowerCase()
+  if (
+    desc.includes('itbi') ||
+    desc.includes('comissão') ||
+    desc.includes('leiloeiro') ||
+    desc.includes('arremata')
+  ) {
+    return 'Aquisição'
   }
+  if (
+    desc.includes('iptu') ||
+    desc.includes('imposto') ||
+    desc.includes('taxa') ||
+    desc.includes('tributo')
+  ) {
+    return 'Tributos'
+  }
+  if (
+    desc.includes('desocupa') ||
+    desc.includes('advogado') ||
+    desc.includes('jurídic') ||
+    desc.includes('oficial')
+  ) {
+    return 'Desocupação'
+  }
+  if (
+    desc.includes('condomínio') ||
+    desc.includes('reforma') ||
+    desc.includes('manutenção') ||
+    desc.includes('luz') ||
+    desc.includes('água')
+  ) {
+    return 'Mensais'
+  }
+  if (desc.includes('corretor') || desc.includes('anúncio') || desc.includes('venda')) {
+    return 'Venda'
+  }
+  return 'Mensais'
+}
+
+export function getEstimatedCostsByCategory(_op?: any): Record<ExpenseCategory, number> {
+  return { ...HARDCODED_ESTIMATED_COSTS }
 }
 
 export function getRealCostsByCategory(
   lancamentos: { tipo: string; descricao: string; valor: number; categoria?: string }[],
 ): Record<ExpenseCategory, number> {
-  const result = EXPENSE_CATEGORIES.reduce(
-    (acc, cat) => ({ ...acc, [cat]: 0 }),
-    {} as Record<ExpenseCategory, number>,
-  )
+  const res: Record<ExpenseCategory, number> = {
+    Aquisição: 0,
+    Tributos: 0,
+    Desocupação: 0,
+    Mensais: 0,
+    Venda: 0,
+  }
   lancamentos
     .filter((l) => l.tipo === 'Despesa')
     .forEach((l) => {
       const cat = (l.categoria as ExpenseCategory) || categorizeExpense(l.descricao)
-      result[cat] = Math.round((result[cat] + l.valor) * 100) / 100
+      if (res[cat] !== undefined) {
+        res[cat] += l.valor
+      }
     })
-  return result
+  return res
 }
 
 export const CATEGORY_DESCRIPTIONS: Record<ExpenseCategory, string[]> = {
-  Aquisição: ['Sinal', 'Comissão', 'Taxa de serviço'],
-  Tributos: ['ITBI', 'Escritura', 'Registro', 'Averbação AF', 'Diversos'],
-  Desocupação: ['Desocupação', 'Reforma', 'Honorários', 'Custas'],
-  Mensais: ['Prestação', 'Condomínio', 'IPTU'],
-  Venda: ['Corretagem', 'Locação', 'Venda'],
+  Aquisição: ['Comissão Leiloeiro', 'ITBI', 'Escritura', 'Registro', 'Averbação'],
+  Tributos: ['IPTU Atrasado', 'Taxas Judiciais'],
+  Desocupação: ['Assessoria Jurídica / Advogado', 'Acordo com Morador', 'Oficial de Justiça'],
+  Mensais: ['Condomínio Mensal', 'IPTU Mensal', 'Reforma Prevista'],
+  Venda: ['Comissão Corretor (6%)', 'IR sobre Ganho de Capital'],
 }
 
 export const RECEITA_DESCRIPTIONS: string[] = [
-  'venda do imóvel',
-  'devolução de sinal',
-  'aluguel',
-  'outros',
+  'Venda do Imóvel',
+  'Aluguel Temporário',
+  'Outras Receitas',
 ]
