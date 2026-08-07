@@ -51,8 +51,19 @@ export const getOportunidades = () =>
 export const getOportunidade = (id: string) =>
   pb.collection('oportunidades').getOne<Oportunidade>(id)
 
-export const createOportunidade = (data: Partial<Oportunidade> | FormData) =>
-  pb.collection('oportunidades').create<Oportunidade>(data)
+export const createOportunidade = (data: Partial<Oportunidade> | FormData) => {
+  const userId = pb.authStore.record?.id
+  if (data instanceof FormData) {
+    if (userId && !data.has('usuario')) {
+      data.append('usuario', userId)
+    }
+    return pb.collection('oportunidades').create<Oportunidade>(data)
+  }
+  return pb.collection('oportunidades').create<Oportunidade>({
+    ...data,
+    usuario: userId,
+  })
+}
 
 export const updateOportunidade = (id: string, data: Partial<Oportunidade> | FormData) =>
   pb.collection('oportunidades').update<Oportunidade>(id, data)

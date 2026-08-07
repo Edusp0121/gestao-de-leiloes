@@ -14,8 +14,8 @@ export function formatPercent(value: number | undefined | null): string {
 export function formatDate(dateStr: string | undefined | null): string {
   if (!dateStr) return '-'
   try {
-    const d = new Date(dateStr)
-    return d.toLocaleDateString('pt-BR')
+    const date = new Date(dateStr)
+    return new Intl.DateTimeFormat('pt-BR').format(date)
   } catch {
     return dateStr
   }
@@ -24,9 +24,9 @@ export function formatDate(dateStr: string | undefined | null): string {
 export function formatDateShort(dateStr: string | undefined | null): string {
   if (!dateStr) return '-'
   try {
-    const d = new Date(dateStr)
-    const month = String(d.getMonth() + 1).padStart(2, '0')
-    const year = String(d.getFullYear()).slice(-2)
+    const date = new Date(dateStr)
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+    const year = String(date.getUTCFullYear()).slice(-2)
     return `${month}/${year}`
   } catch {
     return dateStr

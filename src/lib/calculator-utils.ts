@@ -1,6 +1,6 @@
 export interface CalculatorInputs {
-  valor_mercado?: number
-  valor_arrematacao?: number
+  valor_mercado: number
+  valor_arrematacao: number
   desagio_venda?: number
   tempo_estimado_venda_meses?: number
   itbi_percent?: number
@@ -16,49 +16,57 @@ export interface CalculatorInputs {
 }
 
 export function calculateMetrics(inputs: CalculatorInputs) {
-  const vMercado = inputs.valor_mercado || 0
-  const vArrematacao = inputs.valor_arrematacao || 0
-  const desagio = inputs.desagio_venda || 0
-  const tempoMeses = inputs.tempo_estimado_venda_meses || 10
-  const irPct = inputs.ir_percent || 15
+  const valorMercado = Number(inputs.valor_mercado) || 0
+  const valorArrematacao = Number(inputs.valor_arrematacao) || 0
+  const desagio = Number(inputs.desagio_venda) || 0
+  const tempoMeses = Number(inputs.tempo_estimado_venda_meses) || 1
+  const itbiPct = Number(inputs.itbi_percent) || 3
+  const comissaoLeiloeiroPct = Number(inputs.comissao_leiloeiro_percent) || 5
+  const comissaoCorretorPct = Number(inputs.comissao_corretor_percent) || 6
+  const escritura = Number(inputs.escritura) || 0
+  const registro = Number(inputs.registro) || 0
+  const averbacao = Number(inputs.averbacao) || 0
+  const reforma = Number(inputs.reforma_prevista) || 0
+  const assessoria = Number(inputs.assessoria_juridica) || 0
+  const condominioIptu = Number(inputs.condominio_iptu_mensal) || 0
+  const irPct = Number(inputs.ir_percent) || 15
 
-  const valorVendaComDesconto = vMercado * (1 - desagio / 100)
+  const valorVendaComDesconto = valorMercado * (1 - desagio / 100)
+  const comissaoLeiloeiro = valorArrematacao * (comissaoLeiloeiroPct / 100)
+  const itbi = valorArrematacao * (itbiPct / 100)
+  const comissaoCorretor = valorVendaComDesconto * (comissaoCorretorPct / 100)
+  const custosCartorio = escritura + registro + averbacao
+  const custosManutencao = condominioIptu * tempoMeses
 
-  const itbi = vArrematacao * ((inputs.itbi_percent || 3) / 100)
-  const comissaoLeiloeiro = vArrematacao * ((inputs.comissao_leiloeiro_percent || 5) / 100)
-  const comissaoCorretor = valorVendaComDesconto * ((inputs.comissao_corretor_percent || 6) / 100)
-  const custosCartorio = (inputs.escritura || 0) + (inputs.registro || 0) + (inputs.averbacao || 0)
-  const reforma = inputs.reforma_prevista || 0
-  const juridico = inputs.assessoria_juridica || 0
-  const condominioIptuTotal = (inputs.condominio_iptu_mensal || 0) * tempoMeses
-
-  const custoTotalInvestido =
-    vArrematacao +
-    itbi +
+  const capitalNecessario =
+    valorArrematacao +
     comissaoLeiloeiro +
+    itbi +
     custosCartorio +
     reforma +
-    juridico +
-    condominioIptuTotal
-  const valorVendaLiquido = valorVendaComDesconto - comissaoCorretor
+    assessoria +
+    custosManutencao
 
-  const ganhoCapitalBase = Math.max(0, valorVendaLiquido - custoTotalInvestido)
-  const irEstimado = ganhoCapitalBase * (irPct / 100)
-  const maiorLucroEsperado = Math.max(0, ganhoCapitalBase - irEstimado)
+  const ganhoCapitalBase = valorVendaComDesconto - capitalNecessario - comissaoCorretor
+  const irValor = Math.max(0, ganhoCapitalBase * (irPct / 100))
+  const maiorLucroEsperado = Math.max(0, ganhoCapitalBase - irValor)
+  const retornoEstimado = maiorLucroEsperado
 
-  const roiPeriodo = custoTotalInvestido > 0 ? (maiorLucroEsperado / custoTotalInvestido) * 100 : 0
-  const roiAnualizado = tempoMeses > 0 ? roiPeriodo * (12 / tempoMeses) : roiPeriodo
-  const lanceTeto = vMercado * 0.65
+  const roiEsperadoPeriodo =
+    capitalNecessario > 0 ? (maiorLucroEsperado / capitalNecessario) * 100 : 0
+  const roiEsperadoAnualizado =
+    tempoMeses > 0 ? (roiEsperadoPeriodo * 12) / tempoMeses : roiEsperadoPeriodo
+  const lanceTeto = valorVendaComDesconto * 0.65
 
   return {
-    valor_venda_com_desconto: valorVendaComDesconto,
-    ganho_capital_base: ganhoCapitalBase,
-    ir_valor: irEstimado,
-    maior_lucro_esperado: maiorLucroEsperado,
-    retorno_estimado: maiorLucroEsperado,
-    roi_esperado_periodo: Number(roiPeriodo.toFixed(2)),
-    roi_esperado_anualizado: Number(roiAnualizado.toFixed(2)),
-    lance_teto: lanceTeto,
-    capital_necessario: custoTotalInvestido,
+    capital_necessario: Math.round(capitalNecessario * 100) / 100,
+    ganho_capital_base: Math.round(ganhoCapitalBase * 100) / 100,
+    ir_valor: Math.round(irValor * 100) / 100,
+    valor_venda_com_desconto: Math.round(valorVendaComDesconto * 100) / 100,
+    maior_lucro_esperado: Math.round(maiorLucroEsperado * 100) / 100,
+    retorno_estimado: Math.round(retornoEstimado * 100) / 100,
+    roi_esperado_periodo: Math.round(roiEsperadoPeriodo * 100) / 100,
+    roi_esperado_anualizado: Math.round(roiEsperadoAnualizado * 100) / 100,
+    lance_teto: Math.round(lanceTeto * 100) / 100,
   }
 }

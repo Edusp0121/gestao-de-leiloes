@@ -26,7 +26,12 @@ export const getLancamentos = (oportunidadeId?: string) => {
   })
 }
 
-export const createLancamento = (data: Partial<Lancamento>) =>
-  pb.collection('lancamentos').create<Lancamento>(data)
+export const createLancamento = (data: Partial<Lancamento>) => {
+  const userId = pb.authStore.record?.id
+  return pb.collection('lancamentos').create<Lancamento>({
+    ...data,
+    usuario: userId,
+  })
+}
 
 export const deleteLancamento = (id: string) => pb.collection('lancamentos').delete(id)

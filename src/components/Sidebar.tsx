@@ -1,7 +1,8 @@
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, PlusCircle, Wallet, History, LogOut, Gavel } from 'lucide-react'
+import { LayoutDashboard, PlusCircle, Wallet, History, LogOut } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
+import logoImg from '@/assets/logochamada-s-fundo-e6c10.png'
 
 interface SidebarProps {
   onItemClick?: () => void
@@ -19,15 +20,15 @@ export function Sidebar({ onItemClick }: SidebarProps) {
   ]
 
   return (
-    <aside className="w-full md:w-[260px] bg-[#5C3A21] text-white flex flex-col h-full min-h-screen">
-      <div className="p-6 flex items-center gap-3 border-b border-[#7A4F2E]">
-        <div className="p-2 bg-[#F97316] rounded-lg text-white">
-          <Gavel className="w-6 h-6" />
-        </div>
-        <div>
-          <h1 className="font-bold text-lg leading-tight tracking-wide">Gestão de Leilões</h1>
-          <p className="text-xs text-[#E3CBB5]">Investimentos Imobiliários</p>
-        </div>
+    <aside className="w-full md:w-[260px] bg-[#2D1B0E] text-white flex flex-col h-full min-h-screen shadow-xl">
+      <div className="p-5 flex flex-col items-center justify-center border-b border-[#5C3A21] bg-[#22130A]">
+        <Link to="/" onClick={onItemClick} className="block transition-transform hover:scale-105">
+          <img
+            src={logoImg}
+            alt="Dou-lhe Três - Assessoria em Leilões Imobiliários"
+            className="h-20 w-auto object-contain"
+          />
+        </Link>
       </div>
 
       <nav className="flex-1 p-4 space-y-1.5">
@@ -40,10 +41,10 @@ export function Sidebar({ onItemClick }: SidebarProps) {
               to={item.path}
               onClick={onItemClick}
               className={cn(
-                'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200',
+                'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200',
                 isActive
                   ? 'bg-[#F97316] text-white shadow-md font-semibold'
-                  : 'text-[#E3CBB5] hover:bg-[#7A4F2E] hover:text-white',
+                  : 'text-[#E3CBB5] hover:bg-[#5C3A21] hover:text-white',
               )}
             >
               <Icon className="w-5 h-5" />
@@ -53,10 +54,10 @@ export function Sidebar({ onItemClick }: SidebarProps) {
         })}
       </nav>
 
-      <div className="p-4 border-t border-[#7A4F2E] bg-[#4D2E18]">
+      <div className="p-4 border-t border-[#5C3A21] bg-[#22130A]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-9 h-9 rounded-full bg-[#F97316] flex items-center justify-center text-white font-bold text-sm shrink-0">
+            <div className="w-9 h-9 rounded-full bg-[#F97316] flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-inner">
               {user?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
             </div>
             <div className="truncate text-xs">
@@ -67,7 +68,7 @@ export function Sidebar({ onItemClick }: SidebarProps) {
           <button
             onClick={signOut}
             title="Sair"
-            className="p-2 text-[#E3CBB5] hover:text-white hover:bg-[#7A4F2E] rounded-md transition-colors shrink-0"
+            className="p-2 text-[#E3CBB5] hover:text-white hover:bg-[#5C3A21] rounded-lg transition-colors shrink-0"
           >
             <LogOut className="w-4 h-4" />
           </button>

@@ -91,11 +91,28 @@ export default function Dashboard() {
   const PIE_COLORS = ['#F97316', '#8B5A2B', '#D97706', '#FBBF24', '#5C3A21']
 
   if (loading) {
-    return <div className="py-12 text-center text-[#7A6A5A]">Carregando painel financeiro...</div>
+    return (
+      <div className="py-12 text-center text-[#7A6A5A] font-medium">
+        Carregando painel financeiro...
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-[#5C3A21]">Dashboard Executivo</h1>
+          <p className="text-sm text-[#7A6A5A]">Visão consolidada do seu portfólio de leilões</p>
+        </div>
+        <Link to="/nova-analise">
+          <Button className="bg-[#F97316] hover:bg-[#EA580C] text-white gap-2 font-medium shadow-md">
+            <PlusCircle className="w-4 h-4" />
+            Nova Análise de Viabilidade
+          </Button>
+        </Link>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-[#FFF4E8] border-[#EDE4D8] shadow-subtle hover:shadow-elevation transition-all">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -236,7 +253,7 @@ export default function Dashboard() {
       <Card className="border-[#EDE4D8]">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base font-bold text-[#5C3A21]">
-            Resumo das Oportunidades Arrematadas
+            Resumo das Oportunidades Cadastradas
           </CardTitle>
           <Link to="/nova-analise">
             <Button size="sm" className="bg-[#F97316] hover:bg-[#EA580C] text-white gap-2">
@@ -262,14 +279,14 @@ export default function Dashboard() {
                   <TableRow className="border-[#EDE4D8]">
                     <TableHead className="text-[#5C3A21] font-semibold">Oportunidade</TableHead>
                     <TableHead className="text-[#5C3A21] font-semibold">Status</TableHead>
+                    <TableHead className="text-[#5C3A21] font-semibold text-center">
+                      Data Aquisição (MM/AA)
+                    </TableHead>
                     <TableHead className="text-[#5C3A21] font-semibold text-right">
-                      Arrematação
+                      Valor Arrematação
                     </TableHead>
                     <TableHead className="text-[#5C3A21] font-semibold text-right">
                       Total Já Gasto
-                    </TableHead>
-                    <TableHead className="text-[#5C3A21] font-semibold text-center">
-                      Aquisição
                     </TableHead>
                     <TableHead className="text-[#5C3A21] font-semibold text-right">
                       Venda Estimada
@@ -281,9 +298,11 @@ export default function Dashboard() {
                 </TableHeader>
                 <TableBody>
                   {oportunidades.map((op) => {
-                    const gastosOp = lancamentos
+                    const despesasOp = lancamentos
                       .filter((l) => l.oportunidade === op.id && l.tipo === 'Despesa')
                       .reduce((acc, l) => acc + l.valor, 0)
+                    const totalGasto = (op.valor_arrematacao || 0) + despesasOp
+
                     return (
                       <TableRow
                         key={op.id}
@@ -292,23 +311,23 @@ export default function Dashboard() {
                         <TableCell className="font-semibold text-[#2D1B0E]">
                           <Link
                             to={`/oportunidade/${op.id}`}
-                            className="hover:text-[#F97316] flex items-center gap-1"
+                            className="hover:text-[#F97316] flex items-center gap-1 group"
                           >
-                            {op.nome}
-                            <ArrowUpRight className="w-3 h-3 text-[#7A6A5A]" />
+                            <span>{op.nome}</span>
+                            <ArrowUpRight className="w-3.5 h-3.5 text-[#7A6A5A] group-hover:text-[#F97316] transition-colors" />
                           </Link>
                         </TableCell>
                         <TableCell>
                           <StatusBadge status={op.status} />
                         </TableCell>
+                        <TableCell className="text-center font-medium text-[#5C3A21]">
+                          {formatDateShort(op.data_aquisicao)}
+                        </TableCell>
                         <TableCell className="text-right font-medium">
                           {formatBRL(op.valor_arrematacao)}
                         </TableCell>
-                        <TableCell className="text-right font-medium text-amber-900">
-                          {formatBRL(gastosOp)}
-                        </TableCell>
-                        <TableCell className="text-center text-xs text-[#7A6A5A]">
-                          {formatDateShort(op.data_aquisicao)}
+                        <TableCell className="text-right font-semibold text-amber-900">
+                          {formatBRL(totalGasto)}
                         </TableCell>
                         <TableCell className="text-right font-medium">
                           {formatBRL(op.valor_venda_com_desconto || op.valor_mercado)}
