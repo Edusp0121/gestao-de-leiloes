@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,7 @@ import { Plus, Pencil } from 'lucide-react'
 import { createLancamento, updateLancamento, Lancamento } from '@/services/lancamentos'
 import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
+import { CATEGORY_DESCRIPTIONS, RECEITA_DESCRIPTIONS } from '@/lib/expense-categories'
 
 const CATEGORIAS = ['Aquisição', 'Tributos', 'Desocupação', 'Mensais', 'Venda'] as const
 
@@ -48,6 +49,21 @@ export function LancamentoFormModal({
   const [data, setData] = useState(new Date().toISOString().split('T')[0])
   const { toast } = useToast()
 
+  const descriptionOptions = useMemo(() => {
+    if (tipo === 'Receita') {
+      return RECEITA_DESCRIPTIONS
+    }
+    return CATEGORY_DESCRIPTIONS[categoria as keyof typeof CATEGORY_DESCRIPTIONS] || []
+  }, [tipo, categoria])
+
+  const currentDescriptionOptions = useMemo(() => {
+    const options = [...descriptionOptions]
+    if (descricao && !options.includes(descricao)) {
+      options.unshift(descricao)
+    }
+    return options
+  }, [descriptionOptions, descricao])
+
   useEffect(() => {
     if (open && editLancamento) {
       setOportunidadeId(editLancamento.oportunidade)
@@ -73,9 +89,15 @@ export function LancamentoFormModal({
 
   const handleTipoChange = (v: 'Despesa' | 'Receita') => {
     setTipo(v)
+    setDescricao('')
     if (v === 'Receita') {
       setCategoria('Venda')
     }
+  }
+
+  const handleCategoriaChange = (v: string) => {
+    setCategoria(v)
+    setDescricao('')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -178,7 +200,7 @@ export function LancamentoFormModal({
           {tipo === 'Despesa' && (
             <div className="space-y-2">
               <Label>Categoria</Label>
-              <Select value={categoria} onValueChange={setCategoria}>
+              <Select value={categoria} onValueChange={handleCategoriaChange}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -194,11 +216,18 @@ export function LancamentoFormModal({
           )}
           <div className="space-y-2">
             <Label>Descrição</Label>
-            <Input
-              placeholder="Ex: ITBI, Reforma, IPTU, etc."
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
-            />
+            <Select value={descricao} onValueChange={setDescricao}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a descrição" />
+              </SelectTrigger>
+              <SelectContent>
+                {currentDescriptionOptions.map((desc) => (
+                  <SelectItem key={desc} value={desc}>
+                    {desc.charAt(0).toUpperCase() + desc.slice(1)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label>Valor (R$)</Label>

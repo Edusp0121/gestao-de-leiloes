@@ -66,7 +66,22 @@ export function getRealCostsByCategory(
     .filter((l) => l.tipo === 'Despesa')
     .forEach((l) => {
       const cat = (l.categoria as ExpenseCategory) || categorizeExpense(l.descricao)
-      result[cat] += l.valor
+      result[cat] = Math.round((result[cat] + l.valor) * 100) / 100
     })
   return result
 }
+
+export const CATEGORY_DESCRIPTIONS: Record<ExpenseCategory, string[]> = {
+  Aquisição: ['sinal', 'comissão', 'taxa de serviço'],
+  Tributos: ['ITBI', 'escritura', 'registro', 'averbação', 'diversos'],
+  Desocupação: ['desocupação', 'despejo', 'assessoria jurídica', 'honorários advocatícios'],
+  Mensais: ['condomínio', 'IPTU', 'manutenção', 'reforma'],
+  Venda: ['comissão corretor', 'marketing', 'anúncios'],
+}
+
+export const RECEITA_DESCRIPTIONS: string[] = [
+  'venda do imóvel',
+  'devolução de sinal',
+  'aluguel',
+  'outros',
+]

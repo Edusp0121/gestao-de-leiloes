@@ -113,7 +113,9 @@ export default function Dashboard() {
     EXPENSE_CATEGORIES.forEach((cat) => (catMap[cat] = 0))
     filtered.forEach((l) => {
       const cat = (l.categoria as string) || categorizeExpense(l.descricao)
-      if (catMap[cat] !== undefined) catMap[cat] += l.valor
+      if (catMap[cat] !== undefined) {
+        catMap[cat] = Math.round((catMap[cat] + l.valor) * 100) / 100
+      }
     })
     return Object.entries(catMap)
       .filter(([, value]) => value > 0)
@@ -279,7 +281,7 @@ export default function Dashboard() {
                     cx="50%"
                     cy="50%"
                     outerRadius={80}
-                    label
+                    label={(entry: { value?: number }) => formatBRL(entry.value)}
                   >
                     {pieData.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />

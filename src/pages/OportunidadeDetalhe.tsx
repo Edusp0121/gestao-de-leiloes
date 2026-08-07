@@ -81,10 +81,9 @@ export default function OportunidadeDetalhe() {
   const isBestRoi = allOps.every(
     (other) => (op.roi_esperado_periodo || 0) >= (other.roi_esperado_periodo || 0),
   )
-  const totalDespesasReal = lancamentos
+  const totalInvestidoReal = lancamentos
     .filter((l) => l.tipo === 'Despesa')
     .reduce((acc, l) => acc + l.valor, 0)
-  const totalInvestidoReal = (op.valor_arrematacao || 0) + totalDespesasReal
 
   const relatorioUrl = getRelatorioUrl(op)
 
@@ -169,7 +168,7 @@ export default function OportunidadeDetalhe() {
             </p>
             <p className="text-xl font-bold text-[#5C3A21] mt-1">{formatBRL(totalInvestidoReal)}</p>
             <p className="text-xs text-amber-700 mt-0.5">
-              Arrematação + {lancamentos.length} despesas
+              {lancamentos.filter((l) => l.tipo === 'Despesa').length} despesas registradas
             </p>
           </CardContent>
         </Card>

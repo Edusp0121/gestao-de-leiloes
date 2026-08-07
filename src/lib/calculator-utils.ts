@@ -72,7 +72,7 @@ export function calculateMetrics(inputs: CalculatorInputs) {
 }
 
 export function calcTotalInvestido(
-  op: {
+  _op: {
     valor_arrematacao?: number | null
     saldo_devedor?: number | null
     parcelas_pagas?: number | null
@@ -80,10 +80,5 @@ export function calcTotalInvestido(
   },
   despesas: number,
 ): number {
-  const valorArrematacao = Number(op.valor_arrematacao) || 0
-  const saldoDevedor = Number(op.saldo_devedor) || 0
-  const parcelasPagas = Number(op.parcelas_pagas) || 0
-  const valorParcela = Number(op.valor_parcela_mensal) || 0
-  const entrada = Math.max(0, valorArrematacao - saldoDevedor - parcelasPagas * valorParcela)
-  return Math.round((entrada + parcelasPagas * valorParcela + despesas) * 100) / 100
+  return Math.round(despesas * 100) / 100
 }
