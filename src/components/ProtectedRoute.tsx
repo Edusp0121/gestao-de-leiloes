@@ -1,0 +1,23 @@
+import { Navigate } from 'react-router-dom'
+import { useAuth } from '@/hooks/use-auth'
+
+export function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FAF7F2]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-[#5C3A21] border-t-[#F97316] rounded-full animate-spin" />
+          <p className="text-sm font-medium text-[#5C3A21]">Carregando leilões...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  return <>{children}</>
+}
