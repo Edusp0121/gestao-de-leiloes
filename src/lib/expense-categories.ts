@@ -83,11 +83,11 @@ export function getRealCostsByCategory(
 }
 
 export const CATEGORY_DESCRIPTIONS: Record<ExpenseCategory, string[]> = {
-  Aquisição: ['Comissão Leiloeiro', 'ITBI', 'Escritura', 'Registro', 'Averbação'],
-  Tributos: ['IPTU Atrasado', 'Taxas Judiciais'],
-  Desocupação: ['Assessoria Jurídica / Advogado', 'Acordo com Morador', 'Oficial de Justiça'],
-  Mensais: ['Condomínio Mensal', 'IPTU Mensal', 'Reforma Prevista'],
-  Venda: ['Comissão Corretor (6%)', 'IR sobre Ganho de Capital'],
+  Aquisição: ['Sinal', 'Leiloeiro', 'Taxa de Serviço'],
+  Tributos: ['ITBI', 'Escritura', 'Registro', 'Averbação AF', 'Emolumentos'],
+  Desocupação: ['Acordo', 'Reforma', 'Honorários', 'Custas'],
+  Mensais: ['Prestação', 'Condomínio', 'IPTU'],
+  Venda: ['Corretagem', 'Lucro Imobiliário', 'Venda', 'Locação'],
 }
 
 export const RECEITA_DESCRIPTIONS: string[] = [

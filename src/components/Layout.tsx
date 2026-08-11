@@ -20,13 +20,11 @@ export default function Layout() {
         {/* Mobile Header */}
         <header className="md:hidden flex items-center justify-between bg-[#2D1B0E] px-4 py-3 text-white border-b border-[#5C3A21] sticky top-0 z-40">
           <div className="flex items-center gap-2">
-            <div className="bg-white rounded-md px-2 py-1 shadow-sm">
-              <img
-                src={logoImg}
-                alt="Dou-lhe Três Logo"
-                className="h-9 w-auto object-contain max-w-[140px]"
-              />
-            </div>
+            <img
+              src={logoImg}
+              alt="Dou-lhe Três Logo"
+              className="h-9 w-auto object-contain max-w-[140px]"
+            />
             <span className="font-bold text-sm tracking-wide text-[#F97316]">
               Gestão de Leilões
             </span>
