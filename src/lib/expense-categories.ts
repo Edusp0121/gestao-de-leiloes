@@ -17,44 +17,66 @@ export const HARDCODED_ESTIMATED_COSTS: Record<ExpenseCategory, number> = {
 }
 
 export function categorizeExpense(descricao: string): ExpenseCategory {
-  const desc = descricao.toLowerCase()
+  const desc = descricao.toLowerCase().trim()
+
+  // Aquisição: Sinal, Leiloeiro, Taxa de Serviço
   if (
-    desc.includes('itbi') ||
-    desc.includes('comissão') ||
+    desc.includes('sinal') ||
     desc.includes('leiloeiro') ||
-    desc.includes('arremata')
+    desc.includes('taxa de serviço') ||
+    desc.includes('taxa de servico')
   ) {
     return 'Aquisição'
   }
+
+  // Tributos: ITBI, Escritura, Registro, Averbação AF, Emolumentos
   if (
-    desc.includes('iptu') ||
-    desc.includes('imposto') ||
-    desc.includes('taxa') ||
-    desc.includes('tributo')
+    desc.includes('itbi') ||
+    desc.includes('escritura') ||
+    desc.includes('registro') ||
+    desc.includes('averbação') ||
+    desc.includes('averbacao') ||
+    desc.includes('emolumentos')
   ) {
     return 'Tributos'
   }
+
+  // Desocupação: Acordo, Reforma, Honorários, Custas
   if (
-    desc.includes('desocupa') ||
-    desc.includes('advogado') ||
-    desc.includes('jurídic') ||
-    desc.includes('oficial')
+    desc.includes('acordo') ||
+    desc.includes('reforma') ||
+    desc.includes('honorários') ||
+    desc.includes('honorarios') ||
+    desc.includes('custas')
   ) {
     return 'Desocupação'
   }
+
+  // Mensais: Prestação, Condomínio, IPTU
   if (
+    desc.includes('prestação') ||
+    desc.includes('prestacao') ||
     desc.includes('condomínio') ||
-    desc.includes('reforma') ||
-    desc.includes('manutenção') ||
-    desc.includes('luz') ||
-    desc.includes('água')
+    desc.includes('condominio') ||
+    desc.includes('iptu')
   ) {
     return 'Mensais'
   }
-  if (desc.includes('corretor') || desc.includes('anúncio') || desc.includes('venda')) {
+
+  // Venda: Corretagem, Lucro Imobiliário, Venda, Locação
+  if (
+    desc.includes('corretagem') ||
+    desc.includes('corretor') ||
+    desc.includes('lucro imobiliário') ||
+    desc.includes('lucro imobiliario') ||
+    desc.includes('venda') ||
+    desc.includes('locação') ||
+    desc.includes('locacao')
+  ) {
     return 'Venda'
   }
-  return 'Mensais'
+
+  return 'Aquisição'
 }
 
 export function getEstimatedCostsByCategory(_op?: any): Record<ExpenseCategory, number> {
