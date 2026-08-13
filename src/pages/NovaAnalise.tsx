@@ -66,6 +66,8 @@ export default function NovaAnalise() {
     acordo_desocupacao: 0,
     baixa_gravames: 0,
     foro: 0,
+    taxa_servico: 0,
+    emolumentos: 0,
   })
 
   const handleChange = (field: string, value: any) => {
@@ -95,6 +97,8 @@ export default function NovaAnalise() {
       acordo_desocupacao: Number(form.acordo_desocupacao),
       baixa_gravames: Number(form.baixa_gravames),
       foro: Number(form.foro),
+      taxa_servico: Number(form.taxa_servico),
+      emolumentos: Number(form.emolumentos),
     }),
     valor_parcela_mensal: 0,
     saldo_devedor: 0,
@@ -354,103 +358,211 @@ export default function NovaAnalise() {
             4. Custos e Alíquotas
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label>ITBI (%)</Label>
-            <Input
-              type="number"
-              step="0.1"
-              value={form.itbi_percent}
-              onChange={(e) => handleChange('itbi_percent', e.target.value)}
-            />
+        <CardContent className="space-y-6">
+          {/* Aquisição */}
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-[#8B5A2B] mb-3">
+              Aquisição
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Percentual de Entrada — Sinal (%)</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={form.percentual_entrada}
+                  onChange={(e) => handleChange('percentual_entrada', e.target.value)}
+                />
+                {numericFieldError('percentual_entrada')}
+              </div>
+              <div className="space-y-2">
+                <Label>Comissão Leiloeiro (%)</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={form.comissao_leiloeiro_percent}
+                  onChange={(e) => handleChange('comissao_leiloeiro_percent', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Taxa de Serviço (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.taxa_servico}
+                  onChange={(e) => handleChange('taxa_servico', e.target.value)}
+                />
+                {numericFieldError('taxa_servico')}
+              </div>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label>Comissão Leiloeiro (%)</Label>
-            <Input
-              type="number"
-              step="0.1"
-              value={form.comissao_leiloeiro_percent}
-              onChange={(e) => handleChange('comissao_leiloeiro_percent', e.target.value)}
-            />
+
+          {/* Tributos */}
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-[#8B5A2B] mb-3">
+              Tributos
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>ITBI (%)</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={form.itbi_percent}
+                  onChange={(e) => handleChange('itbi_percent', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Escritura (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.escritura}
+                  onChange={(e) => handleChange('escritura', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Registro (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.registro}
+                  onChange={(e) => handleChange('registro', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Averbação AF (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.averbacao}
+                  onChange={(e) => handleChange('averbacao', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Emolumentos (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.emolumentos}
+                  onChange={(e) => handleChange('emolumentos', e.target.value)}
+                />
+                {numericFieldError('emolumentos')}
+              </div>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label>Comissão Corretor (%)</Label>
-            <Input
-              type="number"
-              step="0.1"
-              value={form.comissao_corretor_percent}
-              onChange={(e) => handleChange('comissao_corretor_percent', e.target.value)}
-            />
+
+          {/* Desocupação */}
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-[#8B5A2B] mb-3">
+              Desocupação
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Acordo Desocupação (R$)</Label>
+                <Input
+                  type="number"
+                  value={form.acordo_desocupacao}
+                  onChange={(e) => handleChange('acordo_desocupacao', e.target.value)}
+                />
+                {numericFieldError('acordo_desocupacao')}
+              </div>
+              <div className="space-y-2">
+                <Label>Reforma Prevista (R$)</Label>
+                <Input
+                  type="number"
+                  value={form.reforma_prevista}
+                  onChange={(e) => handleChange('reforma_prevista', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Assessoria Jurídica (R$)</Label>
+                <Input
+                  type="number"
+                  value={form.assessoria_juridica}
+                  onChange={(e) => handleChange('assessoria_juridica', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Taxas Judiciais (R$)</Label>
+                <Input
+                  type="number"
+                  value={form.taxas_judiciais}
+                  onChange={(e) => handleChange('taxas_judiciais', e.target.value)}
+                />
+                {numericFieldError('taxas_judiciais')}
+              </div>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label>Reforma Prevista (R$)</Label>
-            <Input
-              type="number"
-              value={form.reforma_prevista}
-              onChange={(e) => handleChange('reforma_prevista', e.target.value)}
-            />
+
+          {/* Mensais */}
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-[#8B5A2B] mb-3">
+              Mensais
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Condomínio + IPTU Mensal (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.condominio_iptu_mensal}
+                  onChange={(e) => handleChange('condominio_iptu_mensal', e.target.value)}
+                />
+              </div>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label>Condomínio + IPTU Mensal (R$)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={form.condominio_iptu_mensal}
-              onChange={(e) => handleChange('condominio_iptu_mensal', e.target.value)}
-            />
+
+          {/* Venda */}
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-[#8B5A2B] mb-3">Venda</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Comissão Corretor (%)</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={form.comissao_corretor_percent}
+                  onChange={(e) => handleChange('comissao_corretor_percent', e.target.value)}
+                />
+              </div>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label>Assessoria Jurídica (R$)</Label>
-            <Input
-              type="number"
-              value={form.assessoria_juridica}
-              onChange={(e) => handleChange('assessoria_juridica', e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Taxa de Avaliação (R$)</Label>
-            <Input
-              type="number"
-              value={form.taxa_avaliacao}
-              onChange={(e) => handleChange('taxa_avaliacao', e.target.value)}
-            />
-            {numericFieldError('taxa_avaliacao')}
-          </div>
-          <div className="space-y-2">
-            <Label>Taxas Judiciais (R$)</Label>
-            <Input
-              type="number"
-              value={form.taxas_judiciais}
-              onChange={(e) => handleChange('taxas_judiciais', e.target.value)}
-            />
-            {numericFieldError('taxas_judiciais')}
-          </div>
-          <div className="space-y-2">
-            <Label>Acordo Desocupação (R$)</Label>
-            <Input
-              type="number"
-              value={form.acordo_desocupacao}
-              onChange={(e) => handleChange('acordo_desocupacao', e.target.value)}
-            />
-            {numericFieldError('acordo_desocupacao')}
-          </div>
-          <div className="space-y-2">
-            <Label>Baixa Gravames (R$)</Label>
-            <Input
-              type="number"
-              value={form.baixa_gravames}
-              onChange={(e) => handleChange('baixa_gravames', e.target.value)}
-            />
-            {numericFieldError('baixa_gravames')}
-          </div>
-          <div className="space-y-2">
-            <Label>Foro (R$)</Label>
-            <Input
-              type="number"
-              value={form.foro}
-              onChange={(e) => handleChange('foro', e.target.value)}
-            />
-            {numericFieldError('foro')}
+
+          {/* Outros custos */}
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-[#8B5A2B] mb-3">
+              Outros Custos
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Taxa de Avaliação (R$)</Label>
+                <Input
+                  type="number"
+                  value={form.taxa_avaliacao}
+                  onChange={(e) => handleChange('taxa_avaliacao', e.target.value)}
+                />
+                {numericFieldError('taxa_avaliacao')}
+              </div>
+              <div className="space-y-2">
+                <Label>Baixa Gravames (R$)</Label>
+                <Input
+                  type="number"
+                  value={form.baixa_gravames}
+                  onChange={(e) => handleChange('baixa_gravames', e.target.value)}
+                />
+                {numericFieldError('baixa_gravames')}
+              </div>
+              <div className="space-y-2">
+                <Label>Foro (R$)</Label>
+                <Input
+                  type="number"
+                  value={form.foro}
+                  onChange={(e) => handleChange('foro', e.target.value)}
+                />
+                {numericFieldError('foro')}
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

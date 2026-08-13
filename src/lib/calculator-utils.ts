@@ -22,6 +22,8 @@ export interface CalculatorInputs {
   acordo_desocupacao?: number
   baixa_gravames?: number
   foro?: number
+  taxa_servico?: number
+  emolumentos?: number
 }
 
 export function calculateMetrics(inputs: CalculatorInputs) {
@@ -45,6 +47,8 @@ export function calculateMetrics(inputs: CalculatorInputs) {
   const acordoDesocupacao = Number(inputs.acordo_desocupacao) || 0
   const baixaGravames = Number(inputs.baixa_gravames) || 0
   const foro = Number(inputs.foro) || 0
+  const taxaServico = Number(inputs.taxa_servico) || 0
+  const emolumentos = Number(inputs.emolumentos) || 0
 
   const valorVendaComDesconto = valorMercado * (1 - desagio / 100)
   const comissaoLeiloeiro = valorArrematacao * (comissaoLeiloeiroPct / 100)
@@ -56,8 +60,10 @@ export function calculateMetrics(inputs: CalculatorInputs) {
   const capitalNecessario =
     valorArrematacao +
     comissaoLeiloeiro +
+    taxaServico +
     itbi +
     custosCartorio +
+    emolumentos +
     reforma +
     assessoria +
     custosManutencao +
@@ -94,7 +100,9 @@ export function calculateMetrics(inputs: CalculatorInputs) {
 /**
  * Capital Necessário estimado para uma oportunidade.
  *
- * Fórmula: Total das despesas estimadas + Saldo do financiamento.
+ * Fórmula: Total das despesas estimadas (via getEstimatedCostsByCategory) +
+ * Saldo do financiamento.
+ *
  * A entrada (sinal) já está inclusa nas despesas estimadas (categoria
  * "Aquisição"), portanto NÃO deve ser somada separadamente.
  */
@@ -105,29 +113,35 @@ export function calcCapitalNecessario(op: {
   prazo_financiamento?: number | null
   parcelas_pagas?: number | null
   percentual_entrada?: number | null
+  saldo_devedor?: number | null
 }): number {
   // Total das despesas estimadas (inclui a entrada/sinal na categoria "Aquisição")
   const estimated = getEstimatedCostsByCategory(op as any)
   const totalDespesasEstimadas = Object.values(estimated).reduce((acc, v) => acc + (v || 0), 0)
 
-  // Saldo do financiamento (0 quando à vista)
+  // Saldo do financiamento (0 quando à vista). Se o registro já possuir
+  // saldo_devedor calculado, usamos esse valor; caso contrário recalculamos.
   let saldoFinanciamento = 0
   const modalidade = op.modalidade_financiamento
   if (modalidade && modalidade !== 'À Vista') {
-    const annualRate =
-      op.taxa_juros_financiamento && op.taxa_juros_financiamento > 0
-        ? op.taxa_juros_financiamento
-        : 8
-    const params: FinancingParams = {
-      principal: op.valor_arrematacao || 0,
-      annualRate,
-      termMonths:
-        op.prazo_financiamento && op.prazo_financiamento > 0 ? op.prazo_financiamento : 120,
-      paymentsMade: op.parcelas_pagas || 0,
-      method: modalidade === 'SAC' ? 'SAC' : 'PRICE',
-      entryPercent: op.percentual_entrada ?? 10,
+    if (op.saldo_devedor != null && op.saldo_devedor > 0) {
+      saldoFinanciamento = op.saldo_devedor
+    } else {
+      const annualRate =
+        op.taxa_juros_financiamento && op.taxa_juros_financiamento > 0
+          ? op.taxa_juros_financiamento
+          : 8
+      const params: FinancingParams = {
+        principal: op.valor_arrematacao || 0,
+        annualRate,
+        termMonths:
+          op.prazo_financiamento && op.prazo_financiamento > 0 ? op.prazo_financiamento : 120,
+        paymentsMade: op.parcelas_pagas || 0,
+        method: modalidade === 'SAC' ? 'SAC' : 'PRICE',
+        entryPercent: op.percentual_entrada ?? 10,
+      }
+      saldoFinanciamento = calculateSaldoDevedor(params)
     }
-    saldoFinanciamento = calculateSaldoDevedor(params)
   }
 
   return Math.round((totalDespesasEstimadas + saldoFinanciamento) * 100) / 100
