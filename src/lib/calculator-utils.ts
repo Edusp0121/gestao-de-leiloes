@@ -111,7 +111,10 @@ export function calcCapitalNecessario(op: {
   percentual_entrada?: number | null
   saldo_devedor?: number | null
 }): number {
-  // Total das despesas estimadas (inclui a entrada/sinal na categoria "Aquisição")
+  // Total das despesas estimadas (inclui a entrada/sinal na categoria "Aquisição").
+  // A categoria "Venda" já contém apenas as despesas (Corretagem, Lucro
+  // Imobiliário e Saldo Devedor); os itens de receita da categoria Venda
+  // (Venda, Locação) não entram no somatório — ver getEstimatedCostsByCategory.
   const estimated = getEstimatedCostsByCategory(op as any)
   const totalDespesasEstimadas = Object.values(estimated).reduce((acc, v) => acc + (v || 0), 0)
 

@@ -21,6 +21,7 @@ import {
   EXPENSE_CATEGORIES,
   getEstimatedCostsByCategory,
   getRealCostsByCategory,
+  isVendaReceita,
 } from '@/lib/expense-categories'
 
 export default function Lancamentos() {
@@ -56,7 +57,7 @@ export default function Lancamentos() {
   }
 
   const totalDespesas = lancamentos
-    .filter((l) => l.tipo === 'Despesa')
+    .filter((l) => l.tipo === 'Despesa' && !isVendaReceita(l.descricao))
     .reduce((acc, l) => acc + l.valor, 0)
 
   const totalReceitas = lancamentos

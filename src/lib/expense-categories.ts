@@ -189,6 +189,11 @@ export function getRealCostsByCategory(
     .filter((l) => l.tipo === 'Despesa')
     .forEach((l) => {
       const cat = (l.categoria as ExpenseCategory) || categorizeExpense(l.descricao)
+      // Lançamentos da categoria Venda cuja descrição é "Venda" ou "Locação"
+      // são receitas, não despesas — não entram no somatório de despesas reais.
+      if (cat === 'Venda' && isVendaReceita(l.descricao)) {
+        return
+      }
       if (res[cat] !== undefined) {
         res[cat] += l.valor
       }
@@ -209,3 +214,20 @@ export const RECEITA_DESCRIPTIONS: string[] = [
   'Aluguel Temporário',
   'Outras Receitas',
 ]
+
+/**
+ * Itens da categoria "Venda" que são RECEITAS (e portanto NÃO devem entrar no
+ * somatório de despesas estimadas nem reais). Os demais itens da categoria
+ * Venda — Corretagem, Lucro Imobiliário e Saldo Devedor — são despesas.
+ */
+export const VENDA_RECEITA_DESCRIPTIONS: string[] = ['Venda', 'Locação']
+
+/**
+ * Verifica se uma descrição corresponde a uma receita da categoria Venda
+ * (Venda ou Locação). Esses lançamentos são classificados na categoria Venda,
+ * mas representam entradas de dinheiro e não devem somar ao total de despesas.
+ */
+export function isVendaReceita(descricao: string): boolean {
+  const desc = (descricao || '').toLowerCase().trim()
+  return VENDA_RECEITA_DESCRIPTIONS.some((r) => desc === r.toLowerCase())
+}

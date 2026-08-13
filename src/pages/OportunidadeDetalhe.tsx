@@ -35,6 +35,7 @@ import {
   getEstimatedCostsByCategory,
   getRealCostsByCategory,
   categorizeExpense,
+  isVendaReceita,
   type ExpenseCategory,
 } from '@/lib/expense-categories'
 import { Filter } from 'lucide-react'
@@ -94,7 +95,7 @@ export default function OportunidadeDetalhe() {
     (other) => (op.roi_esperado_periodo || 0) >= (other.roi_esperado_periodo || 0),
   )
   const totalInvestidoReal = lancamentos
-    .filter((l) => l.tipo === 'Despesa')
+    .filter((l) => l.tipo === 'Despesa' && !isVendaReceita(l.descricao))
     .reduce((acc, l) => acc + l.valor, 0)
 
   const relatorioUrl = getRelatorioUrl(op)
@@ -182,7 +183,11 @@ export default function OportunidadeDetalhe() {
             </p>
             <p className="text-xl font-bold text-[#5C3A21] mt-1">{formatBRL(totalInvestidoReal)}</p>
             <p className="text-xs text-amber-700 mt-0.5">
-              {lancamentos.filter((l) => l.tipo === 'Despesa').length} despesas registradas
+              {
+                lancamentos.filter((l) => l.tipo === 'Despesa' && !isVendaReceita(l.descricao))
+                  .length
+              }{' '}
+              despesas registradas
             </p>
           </CardContent>
         </Card>
