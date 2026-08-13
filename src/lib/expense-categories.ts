@@ -63,7 +63,7 @@ export function categorizeExpense(descricao: string): ExpenseCategory {
     return 'Mensais'
   }
 
-  // Venda: Corretagem, Lucro Imobiliário, Venda, Locação
+  // Venda: Corretagem, Lucro Imobiliário, Venda, Locação, Saldo Devedor
   if (
     desc.includes('corretagem') ||
     desc.includes('corretor') ||
@@ -71,7 +71,8 @@ export function categorizeExpense(descricao: string): ExpenseCategory {
     desc.includes('lucro imobiliario') ||
     desc.includes('venda') ||
     desc.includes('locação') ||
-    desc.includes('locacao')
+    desc.includes('locacao') ||
+    desc.includes('saldo devedor')
   ) {
     return 'Venda'
   }
@@ -109,7 +110,7 @@ export const CATEGORY_DESCRIPTIONS: Record<ExpenseCategory, string[]> = {
   Tributos: ['ITBI', 'Escritura', 'Registro', 'Averbação AF', 'Emolumentos'],
   Desocupação: ['Acordo', 'Reforma', 'Honorários', 'Custas'],
   Mensais: ['Prestação', 'Condomínio', 'IPTU'],
-  Venda: ['Corretagem', 'Lucro Imobiliário', 'Venda', 'Locação'],
+  Venda: ['Corretagem', 'Lucro Imobiliário', 'Venda', 'Locação', 'Saldo Devedor'],
 }
 
 export const RECEITA_DESCRIPTIONS: string[] = [
