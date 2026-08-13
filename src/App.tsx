@@ -8,6 +8,7 @@ import Layout from '@/components/Layout'
 
 import Login from '@/pages/Login'
 import Cadastro from '@/pages/Cadastro'
+import RecuperarSenha from '@/pages/RecuperarSenha'
 import Dashboard from '@/pages/Dashboard'
 import NovaAnalise from '@/pages/NovaAnalise'
 import OportunidadeDetalhe from '@/pages/OportunidadeDetalhe'
@@ -24,6 +25,7 @@ const App = () => (
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/cadastro" element={<Cadastro />} />
+          <Route path="/recuperar-senha" element={<RecuperarSenha />} />
 
           <Route
             element={

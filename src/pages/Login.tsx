@@ -93,6 +93,14 @@ export default function Login() {
               {loading ? 'Entrando...' : 'Entrar no Sistema'}
               {!loading && <ArrowRight className="w-4 h-4" />}
             </Button>
+            <div className="text-center">
+              <Link
+                to="/recuperar-senha"
+                className="text-xs text-[#7A6A5A] hover:text-[#F97316] hover:underline transition-colors"
+              >
+                Esqueceu a senha?
+              </Link>
+            </div>
             <p className="text-center text-xs text-[#7A6A5A] pt-2">
               Ainda não possui acesso?{' '}
               <Link to="/cadastro" className="text-[#F97316] font-semibold hover:underline">
