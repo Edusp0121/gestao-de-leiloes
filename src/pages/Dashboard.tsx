@@ -36,7 +36,7 @@ import {
   Tooltip,
 } from 'recharts'
 import { EXPENSE_CATEGORIES, categorizeExpense } from '@/lib/expense-categories'
-import { calcTotalInvestido } from '@/lib/calculator-utils'
+import { calcTotalInvestido, calcCapitalNecessario } from '@/lib/calculator-utils'
 
 export default function Dashboard() {
   const [oportunidades, setOportunidades] = useState<Oportunidade[]>([])
@@ -94,7 +94,7 @@ export default function Dashboard() {
 
   const chartDataBar = oportunidades.map((op) => ({
     name: op.nome.length > 15 ? op.nome.slice(0, 15) + '...' : op.nome,
-    Investido: op.valor_arrematacao || 0,
+    Investido: calcCapitalNecessario(op),
     Retorno: op.retorno_estimado || op.maior_lucro_esperado || 0,
   }))
 

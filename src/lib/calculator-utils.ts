@@ -1,3 +1,6 @@
+import { calculateSaldoDevedor, type FinancingParams } from './financing-utils'
+import { getEstimatedCostsByCategory } from './expense-categories'
+
 export interface CalculatorInputs {
   valor_mercado: number
   valor_arrematacao: number
@@ -86,6 +89,48 @@ export function calculateMetrics(inputs: CalculatorInputs) {
     roi_esperado_anualizado: Math.round(roiEsperadoAnualizado * 100) / 100,
     lance_teto: Math.round(lanceTeto * 100) / 100,
   }
+}
+
+/**
+ * Capital Necessário estimado para uma oportunidade.
+ *
+ * Fórmula: Total das despesas estimadas + Saldo do financiamento.
+ * A entrada (sinal) já está inclusa nas despesas estimadas (categoria
+ * "Aquisição"), portanto NÃO deve ser somada separadamente.
+ */
+export function calcCapitalNecessario(op: {
+  modalidade_financiamento?: 'À Vista' | 'SAC' | 'PRICE' | string
+  valor_arrematacao?: number | null
+  taxa_juros_financiamento?: number | null
+  prazo_financiamento?: number | null
+  parcelas_pagas?: number | null
+  percentual_entrada?: number | null
+}): number {
+  // Total das despesas estimadas (inclui a entrada/sinal na categoria "Aquisição")
+  const estimated = getEstimatedCostsByCategory(op as any)
+  const totalDespesasEstimadas = Object.values(estimated).reduce((acc, v) => acc + (v || 0), 0)
+
+  // Saldo do financiamento (0 quando à vista)
+  let saldoFinanciamento = 0
+  const modalidade = op.modalidade_financiamento
+  if (modalidade && modalidade !== 'À Vista') {
+    const annualRate =
+      op.taxa_juros_financiamento && op.taxa_juros_financiamento > 0
+        ? op.taxa_juros_financiamento
+        : 8
+    const params: FinancingParams = {
+      principal: op.valor_arrematacao || 0,
+      annualRate,
+      termMonths:
+        op.prazo_financiamento && op.prazo_financiamento > 0 ? op.prazo_financiamento : 120,
+      paymentsMade: op.parcelas_pagas || 0,
+      method: modalidade === 'SAC' ? 'SAC' : 'PRICE',
+      entryPercent: op.percentual_entrada ?? 10,
+    }
+    saldoFinanciamento = calculateSaldoDevedor(params)
+  }
+
+  return Math.round((totalDespesasEstimadas + saldoFinanciamento) * 100) / 100
 }
 
 export function calcTotalInvestido(

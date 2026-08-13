@@ -96,6 +96,8 @@ export default function NovaAnalise() {
       baixa_gravames: Number(form.baixa_gravames),
       foro: Number(form.foro),
     }),
+    valor_parcela_mensal: 0,
+    saldo_devedor: 0,
   }
 
   const financingParams: FinancingParams = {
