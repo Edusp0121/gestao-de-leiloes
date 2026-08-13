@@ -34,6 +34,14 @@ export interface Oportunidade {
   ganho_capital_base?: number
   ir_percent?: number
   ir_valor?: number
+  incluir_ir_despesas?: boolean
+  prazo_financiamento?: number
+  percentual_entrada?: number
+  taxa_avaliacao?: number
+  taxas_judiciais?: number
+  acordo_desocupacao?: number
+  baixa_gravames?: number
+  foro?: number
   valor_venda_com_desconto?: number
   maior_lucro_esperado?: number
   retorno_estimado?: number

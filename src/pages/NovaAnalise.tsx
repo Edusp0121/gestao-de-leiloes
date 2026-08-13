@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import {
   Select,
   SelectContent,
@@ -14,7 +15,7 @@ import {
 import { createOportunidade } from '@/services/oportunidades'
 import { calculateMetrics } from '@/lib/calculator-utils'
 import { useToast } from '@/hooks/use-toast'
-import { getErrorMessage } from '@/lib/pocketbase/errors'
+import { getErrorMessage, extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
 import { formatBRL, formatPercent } from '@/lib/formatters'
 import { FileUp, Calculator } from 'lucide-react'
 import { calculateInstallment, calculateSaldoDevedor, FinancingParams } from '@/lib/financing-utils'
@@ -26,6 +27,7 @@ export default function NovaAnalise() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [relatorioFile, setRelatorioFile] = useState<File | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
 
   const [form, setForm] = useState({
     nome: '',
@@ -56,10 +58,19 @@ export default function NovaAnalise() {
     saldo_devedor: 89576.33,
     parcelas_pagas: 3,
     ir_percent: 15,
+    incluir_ir_despesas: true,
+    prazo_financiamento: 120,
+    percentual_entrada: 10,
+    taxa_avaliacao: 0,
+    taxas_judiciais: 0,
+    acordo_desocupacao: 0,
+    baixa_gravames: 0,
+    foro: 0,
   })
 
   const handleChange = (field: string, value: any) => {
     setForm((prev) => ({ ...prev, [field]: value }))
+    setFieldErrors((prev) => ({ ...prev, [field]: '' }))
   }
 
   const computed = {
@@ -78,15 +89,22 @@ export default function NovaAnalise() {
       assessoria_juridica: Number(form.assessoria_juridica),
       condominio_iptu_mensal: Number(form.condominio_iptu_mensal),
       ir_percent: Number(form.ir_percent),
+      incluir_ir_despesas: form.incluir_ir_despesas,
+      taxa_avaliacao: Number(form.taxa_avaliacao),
+      taxas_judiciais: Number(form.taxas_judiciais),
+      acordo_desocupacao: Number(form.acordo_desocupacao),
+      baixa_gravames: Number(form.baixa_gravames),
+      foro: Number(form.foro),
     }),
   }
 
   const financingParams: FinancingParams = {
     principal: Number(form.valor_arrematacao),
     annualRate: Number(form.taxa_juros_financiamento) || 8,
-    termMonths: 120,
+    termMonths: Number(form.prazo_financiamento) || 120,
     paymentsMade: Number(form.parcelas_pagas),
     method: form.modalidade_financiamento === 'SAC' ? 'SAC' : 'PRICE',
+    entryPercent: Number(form.percentual_entrada) || 10,
   }
   computed.valor_parcela_mensal = Math.round(calculateInstallment(financingParams) * 100) / 100
   computed.saldo_devedor = Math.round(calculateSaldoDevedor(financingParams) * 100) / 100
@@ -103,6 +121,7 @@ export default function NovaAnalise() {
     }
 
     setLoading(true)
+    setFieldErrors({})
     try {
       const formData = new FormData()
       Object.entries(form).forEach(([key, val]) => {
@@ -119,11 +138,15 @@ export default function NovaAnalise() {
       toast({ title: 'Sucesso', description: 'Oportunidade cadastrada com sucesso!' })
       navigate(`/oportunidade/${created.id}`)
     } catch (err) {
+      setFieldErrors(extractFieldErrors(err))
       toast({ title: 'Erro ao salvar', description: getErrorMessage(err), variant: 'destructive' })
     } finally {
       setLoading(false)
     }
   }
+
+  const numericFieldError = (field: string) =>
+    fieldErrors[field] ? <p className="text-xs text-red-500 mt-1">{fieldErrors[field]}</p> : null
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -262,6 +285,7 @@ export default function NovaAnalise() {
               value={form.valor_mercado}
               onChange={(e) => handleChange('valor_mercado', e.target.value)}
             />
+            {numericFieldError('valor_mercado')}
           </div>
           <div className="space-y-2">
             <Label>Valor Arrematação (R$)</Label>
@@ -270,6 +294,7 @@ export default function NovaAnalise() {
               value={form.valor_arrematacao}
               onChange={(e) => handleChange('valor_arrematacao', e.target.value)}
             />
+            {numericFieldError('valor_arrematacao')}
           </div>
           <div className="space-y-2">
             <Label>Deságio para Venda (%)</Label>
@@ -279,6 +304,7 @@ export default function NovaAnalise() {
               value={form.desagio_venda}
               onChange={(e) => handleChange('desagio_venda', e.target.value)}
             />
+            {numericFieldError('desagio_venda')}
           </div>
           <div className="space-y-2">
             <Label>Tempo Estimado Venda (meses)</Label>
@@ -287,6 +313,7 @@ export default function NovaAnalise() {
               value={form.tempo_estimado_venda_meses}
               onChange={(e) => handleChange('tempo_estimado_venda_meses', e.target.value)}
             />
+            {numericFieldError('tempo_estimado_venda_meses')}
           </div>
           <div className="space-y-2">
             <Label>Índice Correção Média Mensal — TR (%)</Label>
@@ -296,6 +323,25 @@ export default function NovaAnalise() {
               value={form.indice_correcao_medio_mensal}
               onChange={(e) => handleChange('indice_correcao_medio_mensal', e.target.value)}
             />
+          </div>
+          <div className="space-y-2">
+            <Label>Prazo do Financiamento (meses)</Label>
+            <Input
+              type="number"
+              value={form.prazo_financiamento}
+              onChange={(e) => handleChange('prazo_financiamento', e.target.value)}
+            />
+            {numericFieldError('prazo_financiamento')}
+          </div>
+          <div className="space-y-2">
+            <Label>Percentual de entrada (%)</Label>
+            <Input
+              type="number"
+              step="0.1"
+              value={form.percentual_entrada}
+              onChange={(e) => handleChange('percentual_entrada', e.target.value)}
+            />
+            {numericFieldError('percentual_entrada')}
           </div>
         </CardContent>
       </Card>
@@ -359,6 +405,51 @@ export default function NovaAnalise() {
               onChange={(e) => handleChange('assessoria_juridica', e.target.value)}
             />
           </div>
+          <div className="space-y-2">
+            <Label>Taxa de Avaliação (R$)</Label>
+            <Input
+              type="number"
+              value={form.taxa_avaliacao}
+              onChange={(e) => handleChange('taxa_avaliacao', e.target.value)}
+            />
+            {numericFieldError('taxa_avaliacao')}
+          </div>
+          <div className="space-y-2">
+            <Label>Taxas Judiciais (R$)</Label>
+            <Input
+              type="number"
+              value={form.taxas_judiciais}
+              onChange={(e) => handleChange('taxas_judiciais', e.target.value)}
+            />
+            {numericFieldError('taxas_judiciais')}
+          </div>
+          <div className="space-y-2">
+            <Label>Acordo Desocupação (R$)</Label>
+            <Input
+              type="number"
+              value={form.acordo_desocupacao}
+              onChange={(e) => handleChange('acordo_desocupacao', e.target.value)}
+            />
+            {numericFieldError('acordo_desocupacao')}
+          </div>
+          <div className="space-y-2">
+            <Label>Baixa Gravames (R$)</Label>
+            <Input
+              type="number"
+              value={form.baixa_gravames}
+              onChange={(e) => handleChange('baixa_gravames', e.target.value)}
+            />
+            {numericFieldError('baixa_gravames')}
+          </div>
+          <div className="space-y-2">
+            <Label>Foro (R$)</Label>
+            <Input
+              type="number"
+              value={form.foro}
+              onChange={(e) => handleChange('foro', e.target.value)}
+            />
+            {numericFieldError('foro')}
+          </div>
         </CardContent>
       </Card>
 
@@ -369,28 +460,44 @@ export default function NovaAnalise() {
             5. Resumo Calculado em Tempo Real
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-          <div className="p-3 bg-white rounded-lg border border-[#EDE4D8]">
-            <p className="text-xs text-[#7A6A5A]">Venda c/ Desconto</p>
-            <p className="text-lg font-bold text-[#5C3A21]">
-              {formatBRL(computed.valor_venda_com_desconto)}
-            </p>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-[#EDE4D8]">
+            <div>
+              <Label className="text-sm font-medium text-[#5C3A21]">
+                Incluir Ganho de Capital (IR) nas despesas
+              </Label>
+              <p className="text-xs text-[#7A6A5A] mt-0.5">
+                Quando desativado, o IR não será descontado do lucro esperado.
+              </p>
+            </div>
+            <Switch
+              checked={form.incluir_ir_despesas}
+              onCheckedChange={(checked) => handleChange('incluir_ir_despesas', checked)}
+            />
           </div>
-          <div className="p-3 bg-white rounded-lg border border-[#EDE4D8]">
-            <p className="text-xs text-[#7A6A5A]">Lucro Esperado</p>
-            <p className="text-lg font-bold text-[#16A34A]">
-              {formatBRL(computed.maior_lucro_esperado)}
-            </p>
-          </div>
-          <div className="p-3 bg-white rounded-lg border border-[#EDE4D8]">
-            <p className="text-xs text-[#7A6A5A]">ROI no Período</p>
-            <p className="text-lg font-bold text-[#F97316]">
-              {formatPercent(computed.roi_esperado_periodo)}
-            </p>
-          </div>
-          <div className="p-3 bg-white rounded-lg border border-[#EDE4D8]">
-            <p className="text-xs text-[#7A6A5A]">Lance Teto Recomendado</p>
-            <p className="text-lg font-bold text-[#8B5A2B]">{formatBRL(computed.lance_teto)}</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div className="p-3 bg-white rounded-lg border border-[#EDE4D8]">
+              <p className="text-xs text-[#7A6A5A]">Venda c/ Desconto</p>
+              <p className="text-lg font-bold text-[#5C3A21]">
+                {formatBRL(computed.valor_venda_com_desconto)}
+              </p>
+            </div>
+            <div className="p-3 bg-white rounded-lg border border-[#EDE4D8]">
+              <p className="text-xs text-[#7A6A5A]">Lucro Esperado</p>
+              <p className="text-lg font-bold text-[#16A34A]">
+                {formatBRL(computed.maior_lucro_esperado)}
+              </p>
+            </div>
+            <div className="p-3 bg-white rounded-lg border border-[#EDE4D8]">
+              <p className="text-xs text-[#7A6A5A]">ROI no Período</p>
+              <p className="text-lg font-bold text-[#F97316]">
+                {formatPercent(computed.roi_esperado_periodo)}
+              </p>
+            </div>
+            <div className="p-3 bg-white rounded-lg border border-[#EDE4D8]">
+              <p className="text-xs text-[#7A6A5A]">Lance Teto Recomendado</p>
+              <p className="text-lg font-bold text-[#8B5A2B]">{formatBRL(computed.lance_teto)}</p>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -13,6 +13,12 @@ export interface CalculatorInputs {
   assessoria_juridica?: number
   condominio_iptu_mensal?: number
   ir_percent?: number
+  incluir_ir_despesas?: boolean
+  taxa_avaliacao?: number
+  taxas_judiciais?: number
+  acordo_desocupacao?: number
+  baixa_gravames?: number
+  foro?: number
 }
 
 export function calculateMetrics(inputs: CalculatorInputs) {
@@ -30,6 +36,12 @@ export function calculateMetrics(inputs: CalculatorInputs) {
   const assessoria = Number(inputs.assessoria_juridica) || 0
   const condominioIptu = Number(inputs.condominio_iptu_mensal) || 0
   const irPct = Number(inputs.ir_percent) || 15
+  const incluirIR = inputs.incluir_ir_despesas !== false
+  const taxaAvaliacao = Number(inputs.taxa_avaliacao) || 0
+  const taxasJudiciais = Number(inputs.taxas_judiciais) || 0
+  const acordoDesocupacao = Number(inputs.acordo_desocupacao) || 0
+  const baixaGravames = Number(inputs.baixa_gravames) || 0
+  const foro = Number(inputs.foro) || 0
 
   const valorVendaComDesconto = valorMercado * (1 - desagio / 100)
   const comissaoLeiloeiro = valorArrematacao * (comissaoLeiloeiroPct / 100)
@@ -45,10 +57,15 @@ export function calculateMetrics(inputs: CalculatorInputs) {
     custosCartorio +
     reforma +
     assessoria +
-    custosManutencao
+    custosManutencao +
+    taxaAvaliacao +
+    taxasJudiciais +
+    acordoDesocupacao +
+    baixaGravames +
+    foro
 
   const ganhoCapitalBase = valorVendaComDesconto - capitalNecessario - comissaoCorretor
-  const irValor = Math.max(0, ganhoCapitalBase * (irPct / 100))
+  const irValor = incluirIR ? Math.max(0, ganhoCapitalBase * (irPct / 100)) : 0
   const maiorLucroEsperado = Math.max(0, ganhoCapitalBase - irValor)
   const retornoEstimado = maiorLucroEsperado
 
