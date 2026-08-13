@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-13T18:22:26.174Z",
+  "generatedAt": "2026-08-13T18:35:24.437Z",
   "collections": [
     {
       "name": "users",
@@ -352,18 +352,6 @@
         {
           "name": "incluir_ir_despesas",
           "type": "bool",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "taxa_servico",
-          "type": "number",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "emolumentos",
-          "type": "number",
           "required": false,
           "system": false
         }

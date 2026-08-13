@@ -66,8 +66,6 @@ export default function NovaAnalise() {
     acordo_desocupacao: 0,
     baixa_gravames: 0,
     foro: 0,
-    taxa_servico: 0,
-    emolumentos: 0,
   })
 
   const handleChange = (field: string, value: any) => {
@@ -97,8 +95,6 @@ export default function NovaAnalise() {
       acordo_desocupacao: Number(form.acordo_desocupacao),
       baixa_gravames: Number(form.baixa_gravames),
       foro: Number(form.foro),
-      taxa_servico: Number(form.taxa_servico),
-      emolumentos: Number(form.emolumentos),
     }),
     valor_parcela_mensal: 0,
     saldo_devedor: 0,
@@ -384,16 +380,6 @@ export default function NovaAnalise() {
                   onChange={(e) => handleChange('comissao_leiloeiro_percent', e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Taxa de Serviço (R$)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={form.taxa_servico}
-                  onChange={(e) => handleChange('taxa_servico', e.target.value)}
-                />
-                {numericFieldError('taxa_servico')}
-              </div>
             </div>
           </div>
 
@@ -438,16 +424,6 @@ export default function NovaAnalise() {
                   value={form.averbacao}
                   onChange={(e) => handleChange('averbacao', e.target.value)}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label>Emolumentos (R$)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={form.emolumentos}
-                  onChange={(e) => handleChange('emolumentos', e.target.value)}
-                />
-                {numericFieldError('emolumentos')}
               </div>
             </div>
           </div>

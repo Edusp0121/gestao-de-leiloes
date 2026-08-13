@@ -47,8 +47,6 @@ export function calculateMetrics(inputs: CalculatorInputs) {
   const acordoDesocupacao = Number(inputs.acordo_desocupacao) || 0
   const baixaGravames = Number(inputs.baixa_gravames) || 0
   const foro = Number(inputs.foro) || 0
-  const taxaServico = Number(inputs.taxa_servico) || 0
-  const emolumentos = Number(inputs.emolumentos) || 0
 
   const valorVendaComDesconto = valorMercado * (1 - desagio / 100)
   const comissaoLeiloeiro = valorArrematacao * (comissaoLeiloeiroPct / 100)
@@ -60,10 +58,8 @@ export function calculateMetrics(inputs: CalculatorInputs) {
   const capitalNecessario =
     valorArrematacao +
     comissaoLeiloeiro +
-    taxaServico +
     itbi +
     custosCartorio +
-    emolumentos +
     reforma +
     assessoria +
     custosManutencao +

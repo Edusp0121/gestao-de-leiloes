@@ -11,24 +11,18 @@ export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
 export function categorizeExpense(descricao: string): ExpenseCategory {
   const desc = descricao.toLowerCase().trim()
 
-  // Aquisição: Sinal, Leiloeiro, Taxa de Serviço
-  if (
-    desc.includes('sinal') ||
-    desc.includes('leiloeiro') ||
-    desc.includes('taxa de serviço') ||
-    desc.includes('taxa de servico')
-  ) {
+  // Aquisição: Sinal, Leiloeiro
+  if (desc.includes('sinal') || desc.includes('leiloeiro')) {
     return 'Aquisição'
   }
 
-  // Tributos: ITBI, Escritura, Registro, Averbação AF, Emolumentos
+  // Tributos: ITBI, Escritura, Registro, Averbação AF
   if (
     desc.includes('itbi') ||
     desc.includes('escritura') ||
     desc.includes('registro') ||
     desc.includes('averbação') ||
-    desc.includes('averbacao') ||
-    desc.includes('emolumentos')
+    desc.includes('averbacao')
   ) {
     return 'Tributos'
   }
@@ -81,8 +75,8 @@ const num = (v: any): number => {
  * Cálculo dinâmico dos custos estimados por categoria, com base nos campos
  * reais da oportunidade. Campos nulos/undefined são tratados como 0.
  *
- * Aquisição    = Sinal + Leiloeiro + Taxa de Serviço
- * Tributos     = ITBI + Escritura + Registro + Averbação + Emolumentos
+ * Aquisição    = Sinal + Leiloeiro
+ * Tributos     = ITBI + Escritura + Registro + Averbação
  * Desocupação  = Acordo + Reforma + Honorários + Custas
  * Mensais      = Prestações pagas + (Condomínio+IPTU mensal * prazo)
  * Venda        = Corretagem + Lucro imobiliário + Saldo devedor
@@ -101,13 +95,11 @@ export function getEstimatedCostsByCategory(op?: any): Record<ExpenseCategory, n
   const valorArrematacao = num(op.valor_arrematacao)
   const percentualEntrada = num(op.percentual_entrada)
   const comissaoLeiloeiroPercent = num(op.comissao_leiloeiro_percent)
-  const taxaServico = num(op.taxa_servico)
 
   const itbiPercent = num(op.itbi_percent)
   const escritura = num(op.escritura)
   const registro = num(op.registro)
   const averbacao = num(op.averbacao)
-  const emolumentos = num(op.emolumentos)
 
   const acordoDesocupacao = num(op.acordo_desocupacao)
   const reformaPrevista = num(op.reforma_prevista)
@@ -126,11 +118,11 @@ export function getEstimatedCostsByCategory(op?: any): Record<ExpenseCategory, n
   // Aquisição
   const sinal = (percentualEntrada / 100) * valorArrematacao
   const leiloeiro = (comissaoLeiloeiroPercent / 100) * valorArrematacao
-  const aquisicao = sinal + leiloeiro + taxaServico
+  const aquisicao = sinal + leiloeiro
 
   // Tributos
   const itbi = (itbiPercent / 100) * valorArrematacao
-  const tributos = itbi + escritura + registro + averbacao + emolumentos
+  const tributos = itbi + escritura + registro + averbacao
 
   // Desocupação
   const desocupacao = acordoDesocupacao + reformaPrevista + assessoriaJuridica + taxasJudiciais
@@ -178,8 +170,8 @@ export function getRealCostsByCategory(
 }
 
 export const CATEGORY_DESCRIPTIONS: Record<ExpenseCategory, string[]> = {
-  Aquisição: ['Sinal', 'Leiloeiro', 'Taxa de Serviço'],
-  Tributos: ['ITBI', 'Escritura', 'Registro', 'Averbação AF', 'Emolumentos'],
+  Aquisição: ['Sinal', 'Leiloeiro'],
+  Tributos: ['ITBI', 'Escritura', 'Registro', 'Averbação AF'],
   Desocupação: ['Acordo', 'Reforma', 'Honorários', 'Custas'],
   Mensais: ['Prestação', 'Condomínio', 'IPTU'],
   Venda: ['Corretagem', 'Lucro Imobiliário', 'Venda', 'Locação', 'Saldo Devedor'],
