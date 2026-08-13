@@ -1,8 +1,28 @@
 import { useEffect, useState, useMemo } from 'react'
-import { Link } from 'react-router-dom'
-import { DollarSign, TrendingUp, Percent, Building2, PlusCircle, ArrowUpRight } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import {
+  DollarSign,
+  TrendingUp,
+  Percent,
+  Building2,
+  PlusCircle,
+  ArrowUpRight,
+  Pencil,
+  Trash2,
+} from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import {
   Table,
   TableBody,
@@ -18,11 +38,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { getOportunidades, Oportunidade } from '@/services/oportunidades'
+import { getOportunidades, deleteOportunidade, Oportunidade } from '@/services/oportunidades'
 import { getLancamentos, Lancamento } from '@/services/lancamentos'
 import { formatBRL, formatPercent, formatDateShort } from '@/lib/formatters'
 import { StatusBadge } from '@/components/StatusBadge'
 import { useRealtime } from '@/hooks/use-realtime'
+import { useToast } from '@/hooks/use-toast'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import {
   BarChart,
@@ -39,10 +60,14 @@ import { EXPENSE_CATEGORIES, categorizeExpense } from '@/lib/expense-categories'
 import { calcTotalInvestido, calcCapitalNecessario } from '@/lib/calculator-utils'
 
 export default function Dashboard() {
+  const navigate = useNavigate()
+  const { toast } = useToast()
   const [oportunidades, setOportunidades] = useState<Oportunidade[]>([])
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([])
   const [loading, setLoading] = useState(true)
   const [chartOpId, setChartOpId] = useState<string>('all')
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
   const loadData = async () => {
     try {
@@ -60,6 +85,26 @@ export default function Dashboard() {
 
   useRealtime('oportunidades', () => loadData())
   useRealtime('lancamentos', () => loadData())
+
+  const handleDelete = async () => {
+    if (!deletingId) return
+    const opId = deletingId
+    try {
+      await deleteOportunidade(opId)
+      toast({ title: 'Excluída', description: 'Oportunidade e lançamentos removidos.' })
+      setDeletingId(null)
+      setDeleteDialogOpen(false)
+      await loadData()
+    } catch {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível excluir a oportunidade.',
+        variant: 'destructive',
+      })
+      setDeletingId(null)
+      setDeleteDialogOpen(false)
+    }
+  }
 
   const totalInvestido = useMemo(
     () => lancamentos.filter((l) => l.tipo === 'Despesa').reduce((acc, l) => acc + l.valor, 0),
@@ -335,6 +380,9 @@ export default function Dashboard() {
                     <TableHead className="text-[#5C3A21] font-semibold text-right">
                       Retorno Estimado
                     </TableHead>
+                    <TableHead className="text-[#5C3A21] font-semibold text-center">
+                      Ações
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -374,6 +422,59 @@ export default function Dashboard() {
                         </TableCell>
                         <TableCell className="text-right font-bold text-[#16A34A]">
                           {formatBRL(op.retorno_estimado || op.maior_lucro_esperado)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-blue-600 hover:bg-blue-50"
+                              title="Editar oportunidade"
+                              onClick={() => navigate(`/nova-analise/${op.id}`)}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <AlertDialog
+                              open={deleteDialogOpen && deletingId === op.id}
+                              onOpenChange={(open) => {
+                                setDeleteDialogOpen(open)
+                                if (!open) setDeletingId(null)
+                              }}
+                            >
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-red-500 hover:bg-red-50"
+                                  title="Excluir oportunidade"
+                                  onClick={() => {
+                                    setDeletingId(op.id)
+                                    setDeleteDialogOpen(true)
+                                  }}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Excluir oportunidade</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Tem certeza que deseja excluir esta oportunidade? Todos os
+                                    lançamentos associados também serão removidos.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={handleDelete}
+                                    className="bg-red-600 hover:bg-red-700 text-white"
+                                  >
+                                    Excluir
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
                         </TableCell>
                       </TableRow>
                     )

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,7 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { createOportunidade } from '@/services/oportunidades'
+import {
+  createOportunidade,
+  getOportunidade,
+  updateOportunidade,
+  type Oportunidade,
+} from '@/services/oportunidades'
 import { calculateMetrics } from '@/lib/calculator-utils'
 import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage, extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
@@ -22,51 +27,101 @@ import { calculateInstallment, calculateSaldoDevedor, FinancingParams } from '@/
 
 const AGENTES = ['Caixa', 'Bradesco', 'Itaú', 'Santander', 'Emgea', 'Direto', 'Outros']
 
+const DEFAULT_FORM = {
+  nome: '',
+  endereco: '',
+  tipo_leilao: 'Judicial' as 'Judicial' | 'Extrajudicial',
+  banco_selecionado: 'Caixa',
+  data_aquisicao: new Date().toISOString().split('T')[0],
+  status: 'Em análise' as 'Em análise' | 'Arrematada' | 'Em andamento' | 'Vendida',
+  desagio_venda: 10,
+  valor_mercado: 240000,
+  valor_arrematacao: 101200,
+  tempo_estimado_venda_meses: 10,
+  indice_correcao_medio_mensal: 0.17,
+  itbi_percent: 3,
+  comissao_leiloeiro_percent: 5,
+  comissao_corretor_percent: 6,
+  escritura: 0,
+  registro: 0,
+  averbacao: 0,
+  reforma_prevista: 8000,
+  assessoria_juridica: 2626,
+  condominio_iptu_mensal: 1926,
+  modalidade_financiamento: 'PRICE' as 'À Vista' | 'SAC' | 'PRICE',
+  banco_responsavel_financiamento: '',
+  taxa_juros_financiamento: 8,
+  aliquota_reajuste: 0,
+  valor_parcela_mensal: 1105.05,
+  saldo_devedor: 89576.33,
+  parcelas_pagas: 3,
+  ir_percent: 15,
+  incluir_ir_despesas: true,
+  prazo_financiamento: 120,
+  percentual_entrada: 10,
+  taxa_avaliacao: 0,
+  taxas_judiciais: 0,
+  acordo_desocupacao: 0,
+  baixa_gravames: 0,
+  foro: 0,
+}
+
+function formFromOportunidade(op: Oportunidade) {
+  const f = { ...DEFAULT_FORM }
+  const keys = Object.keys(f) as (keyof typeof DEFAULT_FORM)[]
+  keys.forEach((k) => {
+    const v = op[k as keyof Oportunidade]
+    if (v !== undefined && v !== null && v !== '') {
+      ;(f as any)[k] = v
+    }
+  })
+  // Datas chegam como ISO do PocketBase; o input type="date" precisa de yyyy-mm-dd.
+  if (op.data_aquisicao) {
+    f.data_aquisicao = op.data_aquisicao.split(' ')[0].split('T')[0]
+  }
+  return f
+}
+
 export default function NovaAnalise() {
   const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>()
+  const isEdit = Boolean(id)
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
+  const [loadingOp, setLoadingOp] = useState(isEdit)
   const [relatorioFile, setRelatorioFile] = useState<File | null>(null)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [form, setForm] = useState({ ...DEFAULT_FORM })
 
-  const [form, setForm] = useState({
-    nome: '',
-    endereco: '',
-    tipo_leilao: 'Judicial' as 'Judicial' | 'Extrajudicial',
-    banco_selecionado: 'Caixa',
-    data_aquisicao: new Date().toISOString().split('T')[0],
-    status: 'Em análise' as 'Em análise' | 'Arrematada' | 'Em andamento' | 'Vendida',
-    desagio_venda: 10,
-    valor_mercado: 240000,
-    valor_arrematacao: 101200,
-    tempo_estimado_venda_meses: 10,
-    indice_correcao_medio_mensal: 0.17,
-    itbi_percent: 3,
-    comissao_leiloeiro_percent: 5,
-    comissao_corretor_percent: 6,
-    escritura: 0,
-    registro: 0,
-    averbacao: 0,
-    reforma_prevista: 8000,
-    assessoria_juridica: 2626,
-    condominio_iptu_mensal: 1926,
-    modalidade_financiamento: 'PRICE' as 'À Vista' | 'SAC' | 'PRICE',
-    banco_responsavel_financiamento: '',
-    taxa_juros_financiamento: 8,
-    aliquota_reajuste: 0,
-    valor_parcela_mensal: 1105.05,
-    saldo_devedor: 89576.33,
-    parcelas_pagas: 3,
-    ir_percent: 15,
-    incluir_ir_despesas: true,
-    prazo_financiamento: 120,
-    percentual_entrada: 10,
-    taxa_avaliacao: 0,
-    taxas_judiciais: 0,
-    acordo_desocupacao: 0,
-    baixa_gravames: 0,
-    foro: 0,
-  })
+  useEffect(() => {
+    let active = true
+    if (!id) {
+      setForm({ ...DEFAULT_FORM })
+      setLoadingOp(false)
+      return
+    }
+    setLoadingOp(true)
+    getOportunidade(id)
+      .then((op) => {
+        if (active) setForm(formFromOportunidade(op))
+      })
+      .catch(() => {
+        if (active) {
+          toast({
+            title: 'Erro',
+            description: 'Oportunidade não encontrada para edição.',
+            variant: 'destructive',
+          })
+          navigate('/nova-analise', { replace: true })
+        }
+      })
+      .finally(() => {
+        if (active) setLoadingOp(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [id])
 
   const handleChange = (field: string, value: any) => {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -136,9 +191,15 @@ export default function NovaAnalise() {
         formData.append('relatorio_viabilidade', relatorioFile)
       }
 
-      const created = await createOportunidade(formData)
-      toast({ title: 'Sucesso', description: 'Oportunidade cadastrada com sucesso!' })
-      navigate(`/oportunidade/${created.id}`)
+      if (isEdit && id) {
+        await updateOportunidade(id, formData)
+        toast({ title: 'Sucesso', description: 'Oportunidade atualizada com sucesso!' })
+        navigate(`/oportunidade/${id}`)
+      } else {
+        const created = await createOportunidade(formData)
+        toast({ title: 'Sucesso', description: 'Oportunidade cadastrada com sucesso!' })
+        navigate(`/oportunidade/${created.id}`)
+      }
     } catch (err) {
       setFieldErrors(extractFieldErrors(err))
       toast({ title: 'Erro ao salvar', description: getErrorMessage(err), variant: 'destructive' })
@@ -150,13 +211,25 @@ export default function NovaAnalise() {
   const numericFieldError = (field: string) =>
     fieldErrors[field] ? <p className="text-xs text-red-500 mt-1">{fieldErrors[field]}</p> : null
 
+  if (loadingOp) {
+    return (
+      <div className="py-12 text-center text-[#7A6A5A] font-medium">
+        Carregando oportunidade para edição...
+      </div>
+    )
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#5C3A21]">Nova Análise de Viabilidade</h1>
+          <h1 className="text-2xl font-bold text-[#5C3A21]">
+            {isEdit ? 'Editar Análise de Viabilidade' : 'Nova Análise de Viabilidade'}
+          </h1>
           <p className="text-sm text-[#7A6A5A]">
-            Cadastre os parâmetros da oportunidade obtidos na calculadora
+            {isEdit
+              ? 'Atualize os parâmetros da oportunidade'
+              : 'Cadastre os parâmetros da oportunidade obtidos na calculadora'}
           </p>
         </div>
         <div className="flex gap-2">
@@ -168,7 +241,7 @@ export default function NovaAnalise() {
             disabled={loading}
             className="bg-[#F97316] hover:bg-[#EA580C] text-white font-medium"
           >
-            {loading ? 'Salvando...' : 'Salvar Oportunidade'}
+            {loading ? 'Salvando...' : isEdit ? 'Salvar Alterações' : 'Salvar Oportunidade'}
           </Button>
         </div>
       </div>
@@ -601,7 +674,7 @@ export default function NovaAnalise() {
           disabled={loading}
           className="bg-[#F97316] hover:bg-[#EA580C] text-white px-8 py-5 font-semibold shadow-md"
         >
-          {loading ? 'Salvando...' : 'Salvar Oportunidade'}
+          {loading ? 'Salvando...' : isEdit ? 'Salvar Alterações' : 'Salvar Oportunidade'}
         </Button>
       </div>
     </form>

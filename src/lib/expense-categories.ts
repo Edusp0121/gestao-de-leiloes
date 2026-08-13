@@ -82,13 +82,40 @@ const num = (v: any): number => {
  * Venda        = Corretagem + Lucro imobiliário + Saldo devedor
  */
 export function getEstimatedCostsByCategory(op?: any): Record<ExpenseCategory, number> {
+  const EMPTY: Record<ExpenseCategory, number> = {
+    Aquisição: 0,
+    Tributos: 0,
+    Desocupação: 0,
+    Mensais: 0,
+    Venda: 0,
+  }
   if (!op) {
-    return {
-      Aquisição: 0,
-      Tributos: 0,
-      Desocupação: 0,
-      Mensais: 0,
-      Venda: 0,
+    return { ...EMPTY }
+  }
+
+  // Fonte autoritativa: valores estimados por categoria conforme a planilha de
+  // viabilidade (ex.: Resultado_JF), armazenados em `custos_estimados_planilha`.
+  // Quando presentes, sobrescrevem o cálculo derivado dos campos individuais —
+  // estes podem divergir da planilha quando campos foram migrados/zerados
+  // (ex.: percentual_entrada=0 ou taxa_servico removido), exibindo valores
+  // brutos do banco em vez dos totais corretos.
+  const planilhaRaw = op.custos_estimados_planilha
+  if (planilhaRaw) {
+    let planilha: any = planilhaRaw
+    if (typeof planilha === 'string') {
+      try {
+        planilha = JSON.parse(planilhaRaw)
+      } catch (_) {
+        planilha = null
+      }
+    }
+    if (planilha && typeof planilha === 'object') {
+      const result = { ...EMPTY }
+      ;(Object.keys(EMPTY) as ExpenseCategory[]).forEach((cat) => {
+        const v = num(planilha[cat])
+        if (v > 0) result[cat] = Math.round(v * 100) / 100
+      })
+      return result
     }
   }
 

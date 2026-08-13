@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-13T19:10:49.658Z",
+  "generatedAt": "2026-08-13T19:31:49.136Z",
   "collections": [
     {
       "name": "users",
@@ -352,6 +352,12 @@
         {
           "name": "incluir_ir_despesas",
           "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "custos_estimados_planilha",
+          "type": "json",
           "required": false,
           "system": false
         }
