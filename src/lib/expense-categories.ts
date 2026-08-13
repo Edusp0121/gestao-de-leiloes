@@ -142,8 +142,17 @@ export function getEstimatedCostsByCategory(op?: any): Record<ExpenseCategory, n
   const comissaoCorretorPercent = num(op.comissao_corretor_percent)
   const saldoDevedor = num(op.saldo_devedor)
 
+  const isFinanciado =
+    Boolean(op.modalidade_financiamento) &&
+    op.modalidade_financiamento !== 'À Vista' &&
+    (num(op.prazo_financiamento) > 0 || num(op.saldo_devedor) > 0)
+
   // Aquisição
-  const sinal = (percentualEntrada / 100) * valorArrematacao
+  const sinal = isFinanciado
+    ? (percentualEntrada / 100) * valorArrematacao
+    : percentualEntrada > 0
+      ? (percentualEntrada / 100) * valorArrematacao
+      : valorArrematacao
   const leiloeiro = (comissaoLeiloeiroPercent / 100) * valorArrematacao
   const aquisicao = sinal + leiloeiro
 
