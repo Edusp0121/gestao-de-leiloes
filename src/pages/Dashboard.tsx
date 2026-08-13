@@ -56,8 +56,12 @@ import {
   Cell,
   Tooltip,
 } from 'recharts'
-import { EXPENSE_CATEGORIES, categorizeExpense } from '@/lib/expense-categories'
-import { calcTotalInvestido, calcCapitalNecessario } from '@/lib/calculator-utils'
+import { EXPENSE_CATEGORIES, categorizeExpense, isVendaReceita } from '@/lib/expense-categories'
+import {
+  calcTotalInvestido,
+  calcCapitalNecessario,
+  calcRetornoDinamico,
+} from '@/lib/calculator-utils'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -137,11 +141,23 @@ export default function Dashboard() {
     [oportunidades],
   )
 
-  const chartDataBar = oportunidades.map((op) => ({
-    name: op.nome.length > 15 ? op.nome.slice(0, 15) + '...' : op.nome,
-    Investido: calcCapitalNecessario(op),
-    Retorno: op.retorno_estimado || op.maior_lucro_esperado || 0,
-  }))
+  const chartDataBar = oportunidades.map((op) => {
+    // Retorno dinâmico: enquanto não houver receita de venda lançada
+    // (lançamento na categoria Venda com descrição "Venda" ou "Locação"),
+    // calcula-se o retorno a partir do valor estimado de venda menos as
+    // despesas, comissão e saldo devedor. Uma vez existente receita de
+    // venda, usa-se o retorno_estimado salvo no banco.
+    const opLancamentos = lancamentos.filter((l) => l.oportunidade === op.id)
+    const temReceitaVenda = opLancamentos.some((l) => isVendaReceita(l.descricao))
+    const retorno = temReceitaVenda
+      ? op.retorno_estimado || op.maior_lucro_esperado || 0
+      : calcRetornoDinamico(op)
+    return {
+      name: op.nome.length > 15 ? op.nome.slice(0, 15) + '...' : op.nome,
+      Investido: calcCapitalNecessario(op),
+      Retorno: retorno,
+    }
+  })
 
   const pieData = useMemo(() => {
     const filtered =

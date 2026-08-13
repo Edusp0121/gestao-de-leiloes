@@ -93,6 +93,64 @@ export function calculateMetrics(inputs: CalculatorInputs) {
   }
 }
 
+const toNum = (v: unknown): number => {
+  if (v == null) return 0
+  const n = typeof v === 'string' ? parseFloat(v) : Number(v)
+  return Number.isFinite(n) ? n : 0
+}
+
+/**
+ * Total das despesas estimadas de uma oportunidade (soma de todas as
+ * categorias: Aquisição + Tributos + Desocupação + Mensais + Venda).
+ *
+ * A categoria "Venda" aqui contém apenas DESPESAS (Corretagem, Lucro
+ * Imobiliário e Saldo Devedor); os itens de receita da categoria Venda
+ * (Venda, Locação) não entram — ver getEstimatedCostsByCategory.
+ */
+export function calcTotalDespesasEstimadas(op: unknown): number {
+  const estimated = getEstimatedCostsByCategory(op as any)
+  const total = Object.values(estimated).reduce((acc, v) => acc + (v || 0), 0)
+  return Math.round(total * 100) / 100
+}
+
+/**
+ * Saldo devedor do financiamento de uma oportunidade.
+ *
+ * Se o registro já possuir `saldo_devedor` calculado (e positivo), usamos
+ * esse valor; caso contrário recalculamos a partir dos parâmetros do
+ * financiamento. Retorna 0 quando à vista.
+ *
+ * Todos os campos são convertidos via `toNum` para evitar corrupção por
+ * strings vindo do banco (ex.: `saldo_devedor` ou `valor_arrematacao`
+ * serializados como texto).
+ */
+export function calcSaldoDevedorFinanciamento(op: {
+  modalidade_financiamento?: 'À Vista' | 'SAC' | 'PRICE' | string
+  valor_arrematacao?: number | string | null
+  taxa_juros_financiamento?: number | string | null
+  prazo_financiamento?: number | string | null
+  parcelas_pagas?: number | string | null
+  percentual_entrada?: number | string | null
+  saldo_devedor?: number | string | null
+}): number {
+  const modalidade = op.modalidade_financiamento
+  if (!modalidade || modalidade === 'À Vista') return 0
+
+  const saldoStored = toNum(op.saldo_devedor)
+  if (saldoStored > 0) return saldoStored
+
+  const annualRate = toNum(op.taxa_juros_financiamento) || 8
+  const params: FinancingParams = {
+    principal: toNum(op.valor_arrematacao),
+    annualRate,
+    termMonths: toNum(op.prazo_financiamento) || 120,
+    paymentsMade: toNum(op.parcelas_pagas),
+    method: modalidade === 'SAC' ? 'SAC' : 'PRICE',
+    entryPercent: op.percentual_entrada == null ? 10 : toNum(op.percentual_entrada),
+  }
+  return calculateSaldoDevedor(params)
+}
+
 /**
  * Capital Necessário estimado para uma oportunidade.
  *
@@ -101,49 +159,63 @@ export function calculateMetrics(inputs: CalculatorInputs) {
  *
  * A entrada (sinal) já está inclusa nas despesas estimadas (categoria
  * "Aquisição"), portanto NÃO deve ser somada separadamente.
+ *
+ * Todos os campos numéricos são convertidos explicitamente via `toNum` para
+ * evitar corrupção por strings vindo do banco — ex.: `saldo_devedor` ou
+ * `valor_arrematacao` serializados como texto fariam o somatório concatenar
+ * em vez de somar.
  */
 export function calcCapitalNecessario(op: {
   modalidade_financiamento?: 'À Vista' | 'SAC' | 'PRICE' | string
-  valor_arrematacao?: number | null
-  taxa_juros_financiamento?: number | null
-  prazo_financiamento?: number | null
-  parcelas_pagas?: number | null
-  percentual_entrada?: number | null
-  saldo_devedor?: number | null
+  valor_arrematacao?: number | string | null
+  taxa_juros_financiamento?: number | string | null
+  prazo_financiamento?: number | string | null
+  parcelas_pagas?: number | string | null
+  percentual_entrada?: number | string | null
+  saldo_devedor?: number | string | null
 }): number {
-  // Total das despesas estimadas (inclui a entrada/sinal na categoria "Aquisição").
-  // A categoria "Venda" já contém apenas as despesas (Corretagem, Lucro
-  // Imobiliário e Saldo Devedor); os itens de receita da categoria Venda
-  // (Venda, Locação) não entram no somatório — ver getEstimatedCostsByCategory.
-  const estimated = getEstimatedCostsByCategory(op as any)
-  const totalDespesasEstimadas = Object.values(estimated).reduce((acc, v) => acc + (v || 0), 0)
-
-  // Saldo do financiamento (0 quando à vista). Se o registro já possuir
-  // saldo_devedor calculado, usamos esse valor; caso contrário recalculamos.
-  let saldoFinanciamento = 0
-  const modalidade = op.modalidade_financiamento
-  if (modalidade && modalidade !== 'À Vista') {
-    if (op.saldo_devedor != null && op.saldo_devedor > 0) {
-      saldoFinanciamento = op.saldo_devedor
-    } else {
-      const annualRate =
-        op.taxa_juros_financiamento && op.taxa_juros_financiamento > 0
-          ? op.taxa_juros_financiamento
-          : 8
-      const params: FinancingParams = {
-        principal: op.valor_arrematacao || 0,
-        annualRate,
-        termMonths:
-          op.prazo_financiamento && op.prazo_financiamento > 0 ? op.prazo_financiamento : 120,
-        paymentsMade: op.parcelas_pagas || 0,
-        method: modalidade === 'SAC' ? 'SAC' : 'PRICE',
-        entryPercent: op.percentual_entrada ?? 10,
-      }
-      saldoFinanciamento = calculateSaldoDevedor(params)
-    }
-  }
-
+  const totalDespesasEstimadas = calcTotalDespesasEstimadas(op)
+  const saldoFinanciamento = calcSaldoDevedorFinanciamento(op)
   return Math.round((totalDespesasEstimadas + saldoFinanciamento) * 100) / 100
+}
+
+/**
+ * Retorno estimado DINÂMICO de uma oportunidade — usado enquanto não houver
+ * receita de venda lançada (ou seja, nenhum lançamento na categoria Venda
+ * com descrição "Venda" ou "Locação").
+ *
+ *   Retorno = Valor Estimado de Venda
+ *           − Comissão de Venda (comissao_corretor_percent% × valor de venda)
+ *           − Total de Despesas Estimadas
+ *           − Saldo Devedor
+ *
+ * Observação: o "Total de Despesas Estimadas" (calcTotalDespesasEstimadas) já
+ * inclui a comissão de corretagem na categoria "Venda" quando derivada dos
+ * campos individuais, mas quando a oportunidade usa `custos_estimados_planilha`
+ * o valor de Venda ali armazenado pode não incluir a corretagem. Por isso a
+ * comissão é subtraída explicitamente aqui, garantindo consistência com a
+ * fórmula definida no Dashboard.
+ */
+export function calcRetornoDinamico(op: {
+  valor_venda_com_desconto?: number | string | null
+  valor_mercado?: number | string | null
+  comissao_corretor_percent?: number | string | null
+  modalidade_financiamento?: 'À Vista' | 'SAC' | 'PRICE' | string
+  valor_arrematacao?: number | string | null
+  taxa_juros_financiamento?: number | string | null
+  prazo_financiamento?: number | string | null
+  parcelas_pagas?: number | string | null
+  percentual_entrada?: number | string | null
+  saldo_devedor?: number | string | null
+}): number {
+  const valorVenda = toNum(op.valor_venda_com_desconto) || toNum(op.valor_mercado)
+  const comissaoPercent = toNum(op.comissao_corretor_percent)
+  const comissaoVenda = (comissaoPercent / 100) * valorVenda
+  const totalDespesas = calcTotalDespesasEstimadas(op)
+  const saldoDevedor = calcSaldoDevedorFinanciamento(op)
+
+  const retorno = valorVenda - comissaoVenda - totalDespesas - saldoDevedor
+  return Math.round(retorno * 100) / 100
 }
 
 export function calcTotalInvestido(
