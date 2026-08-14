@@ -87,7 +87,7 @@ export function toIdArray(v: unknown): string[] {
  */
 export function isCurrentUserAdmin(): boolean {
   const rec = pb.authStore.record
-  return Boolean(rec && rec.get('admin') === true)
+  return Boolean(rec && (rec as any)?.admin === true)
 }
 
 /**
@@ -215,6 +215,8 @@ export const getUsuarios = async (): Promise<UserRef[]> => {
     return list
   } catch {
     const me = pb.authStore.record
-    return me ? [{ id: me.id, name: (me.get('name') as string) || '', email: me.email }] : []
+    return me
+      ? [{ id: me.id, name: ((me as any)?.name as string) || '', email: (me as any)?.email }]
+      : []
   }
 }
