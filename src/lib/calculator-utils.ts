@@ -177,16 +177,11 @@ export function calcSaldoDevedorFinanciamento(op: {
 /**
  * Capital Necessário estimado para uma oportunidade.
  *
- * Fórmula: Total das despesas estimadas (via getEstimatedCostsByCategory) +
- * Saldo do financiamento.
+ * Fórmula: Total das despesas estimadas (via getEstimatedCostsByCategory).
+ * Não inclui o Saldo Devedor remanescente do financiamento.
  *
  * A entrada (sinal) já está inclusa nas despesas estimadas (categoria
  * "Aquisição"), portanto NÃO deve ser somada separadamente.
- *
- * Todos os campos numéricos são convertidos explicitamente via `toNum` para
- * evitar corrupção por strings vindo do banco — ex.: `saldo_devedor` ou
- * `valor_arrematacao` serializados como texto fariam o somatório concatenar
- * em vez de somar.
  */
 export function calcCapitalNecessario(op: {
   modalidade_financiamento?: 'À Vista' | 'SAC' | 'PRICE' | string
@@ -198,8 +193,7 @@ export function calcCapitalNecessario(op: {
   saldo_devedor?: number | string | null
 }): number {
   const totalDespesasEstimadas = calcTotalDespesasEstimadas(op)
-  const saldoFinanciamento = calcSaldoDevedorFinanciamento(op)
-  return Math.round((totalDespesasEstimadas + saldoFinanciamento) * 100) / 100
+  return Math.round(totalDespesasEstimadas * 100) / 100
 }
 
 /**

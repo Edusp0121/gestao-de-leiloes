@@ -317,10 +317,9 @@ export default function OportunidadeDetalhe() {
     : calcRetornoDinamico({ ...op, saldo_devedor: calculatedSaldoDevedor }, totalInvestidoReal)
 
   // Total Investido (Previsto): apenas o capital necessário estimado das
-  // categorias (calcCapitalNecessario já inclui saldo devedor, tributos,
-  // mensais, etc.). Corretagem e IR são custos de venda e continuam sendo
-  // considerados nos cards de Retorno Estimado e ROI, não aqui. O "Previsto"
-  // é o espelho do "Real", porém com estimativas da planilha.
+  // categorias (sem saldo devedor remanescente). Corretagem e IR são custos de venda
+  // e continuam sendo considerados nos cards de Retorno Estimado e ROI, não aqui.
+  // O "Previsto" é o espelho do "Real", porém com estimativas das categorias.
   const totalInvestidoPrevisto = (() => {
     const opComSaldo = { ...op, saldo_devedor: calculatedSaldoDevedor }
     const capital = calcCapitalNecessario(opComSaldo as any)
