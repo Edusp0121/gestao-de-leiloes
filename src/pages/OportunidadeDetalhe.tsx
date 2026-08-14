@@ -316,20 +316,15 @@ export default function OportunidadeDetalhe() {
     ? toNum(op.retorno_estimado) || toNum(op.maior_lucro_esperado)
     : calcRetornoDinamico({ ...op, saldo_devedor: calculatedSaldoDevedor }, totalInvestidoReal)
 
-  // Total Investido (Previsto): capital necessário estimado + corretagem + IR.
-  // - calcCapitalNecessario já soma todas as categorias estimadas (inclui o
-  //   saldo devedor nas categorias de aquisição).
-  // - corretagem = valor_venda_com_desconto * (comissao_corretor_percent / 100)
-  // - IR = ir_valor (campo do banco), se houver.
+  // Total Investido (Previsto): apenas o capital necessário estimado das
+  // categorias (calcCapitalNecessario já inclui saldo devedor, tributos,
+  // mensais, etc.). Corretagem e IR são custos de venda e continuam sendo
+  // considerados nos cards de Retorno Estimado e ROI, não aqui. O "Previsto"
+  // é o espelho do "Real", porém com estimativas da planilha.
   const totalInvestidoPrevisto = (() => {
     const opComSaldo = { ...op, saldo_devedor: calculatedSaldoDevedor }
     const capital = calcCapitalNecessario(opComSaldo as any)
-    const valorVenda = toNum(op.valor_venda_com_desconto) || toNum(op.valor_mercado)
-    const corretagemPercent = toNum(op.comissao_corretor_percent)
-    const corretagem = corretagemPercent > 0 ? (corretagemPercent / 100) * valorVenda : 0
-    const ir = toNum(op.ir_valor)
-    const total = capital + corretagem + ir
-    return Math.round(total * 100) / 100
+    return Math.round(capital * 100) / 100
   })()
 
   return (
@@ -422,7 +417,7 @@ export default function OportunidadeDetalhe() {
             <p className="text-xl font-bold text-[#5C3A21] mt-1">
               {formatBRL(totalInvestidoPrevisto)}
             </p>
-            <p className="text-xs text-[#7A6A5A] mt-0.5">Capital estimado + corretagem + IR</p>
+            <p className="text-xs text-[#7A6A5A] mt-0.5">Capital estimado das categorias</p>
           </CardContent>
         </Card>
         <Card className="bg-white border-[#EDE4D8]">
