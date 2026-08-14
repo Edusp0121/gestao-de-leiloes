@@ -58,7 +58,25 @@ export function LancamentoFormModal({
     return CATEGORY_DESCRIPTIONS[categoria as keyof typeof CATEGORY_DESCRIPTIONS] || []
   }, [categoria])
 
-  const quemPagouOptions = useMemo(() => buildQuemPagouOptions(participantes), [participantes])
+  // Opções de "Quem Pagou". Prioriza os sócios carregados da oportunidade; se
+  // eles não estiverem disponíveis (falha de carregamento ou lançamento antigo
+  // sem sócios vinculados), monta um fallback mínimo a partir do valor atual do
+  // campo + marcadores de grupo, garantindo que o Select sempre seja usável.
+  const quemPagouOptions = useMemo(() => {
+    const fromParticipantes = buildQuemPagouOptions(participantes)
+    if (fromParticipantes.length > 0) return fromParticipantes
+
+    // Fallback: sem participantes carregados. Inclui os marcadores de grupo
+    // (Ambos/Todos) e, se houver, a letra já presente no lançamento antigo.
+    const fallback: { value: string; label: string }[] = [
+      { value: 'A', label: 'A — Ambos' },
+      { value: 'T', label: 'T — Todos' },
+    ]
+    if (quemPagou && !fallback.some((o) => o.value === quemPagou)) {
+      fallback.unshift({ value: quemPagou, label: `${quemPagou} — Sócio` })
+    }
+    return fallback
+  }, [participantes, quemPagou])
 
   // Carrega os sócios da oportunidade selecionada para montar as opções de
   // "Quem Pagou".
@@ -106,13 +124,27 @@ export function LancamentoFormModal({
     }
   }, [open, editLancamento, defaultOportunidadeId])
 
-  // Define o valor padrão de "Quem Pagou" assim que os participantes da
-  // oportunidade são carregados e o usuário ainda não escolheu um valor.
+  // Define o valor padrão de "Quem Pagou":
+  // - Em lançamentos antigos com `quem_pagou` vazio, preenche automaticamente
+  //   com "A" (2 sócios) ou "T" (>2 sócios) assim que os participantes
+  //   carregam. Se os participantes não carregarem, usa "A" como fallback
+  //   (caso mais comum) para que o campo nunca fique vazio/travado.
+  // - Em novos lançamentos, só preenche quando houver participantes.
   useEffect(() => {
     if (!open) return
-    if (participantes.length === 0) return
     if (editLancamento && editLancamento.quem_pagou) return
-    setQuemPagou(defaultQuemPagou(participantes))
+
+    if (participantes.length > 0) {
+      const def = defaultQuemPagou(participantes)
+      if (def) setQuemPagou(def)
+      return
+    }
+
+    // Sem participantes carregados: só auto-preenche no modo de edição de
+    // lançamento antigo (quem_pagou vazio), para não travar o campo.
+    if (editLancamento && !editLancamento.quem_pagou) {
+      setQuemPagou('A')
+    }
   }, [open, participantes, editLancamento])
 
   const handleTipoChange = (v: 'Despesa' | 'Receita') => {
@@ -271,11 +303,7 @@ export function LancamentoFormModal({
           {tipo === 'Despesa' && (
             <div className="space-y-2">
               <Label>Quem Pagou</Label>
-              <Select
-                value={quemPagou}
-                onValueChange={setQuemPagou}
-                disabled={loadingParticipantes || quemPagouOptions.length === 0}
-              >
+              <Select value={quemPagou} onValueChange={setQuemPagou}>
                 <SelectTrigger>
                   <SelectValue
                     placeholder={
@@ -291,10 +319,8 @@ export function LancamentoFormModal({
                   ))}
                 </SelectContent>
               </Select>
-              {quemPagouOptions.length === 0 && !loadingParticipantes && (
-                <p className="text-xs text-[#7A6A5A]">
-                  Selecione uma oportunidade com sócios cadastrados para definir quem pagou.
-                </p>
+              {loadingParticipantes && (
+                <p className="text-xs text-[#7A6A5A]">Carregando sócios da oportunidade...</p>
               )}
             </div>
           )}
