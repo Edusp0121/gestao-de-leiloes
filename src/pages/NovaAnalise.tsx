@@ -187,6 +187,12 @@ export default function NovaAnalise() {
   computed.valor_parcela_mensal = Math.round(calculateInstallment(financingParams) * 100) / 100
   computed.saldo_devedor = Math.round(calculateSaldoDevedor(financingParams) * 100) / 100
 
+  // O botão de Salvar/Publicar só "acende" (fica ativo) quando os campos
+  // obrigatórios Nome e Endereço estão preenchidos. Enquanto vazios, o botão
+  // permanece desativado, dando feedback visual claro de que o formulário
+  // ainda não pode ser publicado.
+  const canSubmit = form.nome.trim() !== '' && form.endereco.trim() !== ''
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.nome || !form.endereco) {
@@ -265,7 +271,7 @@ export default function NovaAnalise() {
           </Button>
           <Button
             type="submit"
-            disabled={loading}
+            disabled={loading || !canSubmit}
             className="bg-[#F97316] hover:bg-[#EA580C] text-white font-medium"
           >
             {loading ? 'Salvando...' : isEdit ? 'Salvar Alterações' : 'Salvar Oportunidade'}
@@ -715,7 +721,7 @@ export default function NovaAnalise() {
         </Button>
         <Button
           type="submit"
-          disabled={loading}
+          disabled={loading || !canSubmit}
           className="bg-[#F97316] hover:bg-[#EA580C] text-white px-8 py-5 font-semibold shadow-md"
         >
           {loading ? 'Salvando...' : isEdit ? 'Salvar Alterações' : 'Salvar Oportunidade'}
