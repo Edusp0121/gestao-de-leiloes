@@ -45,7 +45,7 @@ import {
 } from '@/lib/expense-categories'
 import { Filter, Users } from 'lucide-react'
 import { calculateInstallment, calculateSaldoDevedor, FinancingParams } from '@/lib/financing-utils'
-import { toNum } from '@/lib/calculator-utils'
+import { toNum, calcRetornoDinamico } from '@/lib/calculator-utils'
 import { primeiraLetraNome, sociosCobertosPorMarca } from '@/lib/participantes-utils'
 import { Badge } from '@/components/ui/badge'
 
@@ -267,24 +267,13 @@ export default function OportunidadeDetalhe() {
   const calculatedInstallment = calculateInstallment(financingParams)
   const calculatedSaldoDevedor = calculateSaldoDevedor(financingParams)
 
-  // Retorno estimado DINÂMICO: enquanto não houver receita de venda lançada
-  // (lançamento do tipo "Receita" com descrição "Venda" ou "Locação"),
-  // calcula-se o retorno a partir do valor estimado de venda menos a comissão
-  // de corretagem, o total investido REAL (lançamentos de despesa) e o saldo
-  // devedor do financiamento. Uma vez existente receita de venda, usa-se o
-  // retorno_estimado salvo no banco.
+  // Retorno estimado DINÂMICO via calcRetornoDinamico
   const temReceitaVenda = lancamentos.some(
     (l) => l.tipo === 'Receita' && isVendaReceita(l.descricao),
   )
-  const valorVendaDyn = toNum(op.valor_venda_com_desconto) || toNum(op.valor_mercado)
-  const comissaoPctDyn =
-    op.comissao_corretor_percent != null ? toNum(op.comissao_corretor_percent) : 6
-  const comissaoVendaDyn = (comissaoPctDyn / 100) * valorVendaDyn
   const retornoEstimadoExibido = temReceitaVenda
     ? toNum(op.retorno_estimado) || toNum(op.maior_lucro_esperado)
-    : Math.round(
-        (valorVendaDyn - comissaoVendaDyn - totalInvestidoReal - calculatedSaldoDevedor) * 100,
-      ) / 100
+    : calcRetornoDinamico({ ...op, saldo_devedor: calculatedSaldoDevedor }, totalInvestidoReal)
 
   return (
     <div className="space-y-6">
@@ -492,7 +481,7 @@ export default function OportunidadeDetalhe() {
         </Card>
       </div>
 
-      {participantesAtuais.length > 1 && totalDespesasRateio > 0 && (
+      {participantesAtuais.length >= 1 && totalDespesasRateio > 0 && (
         <Card className="border-[#EDE4D8] bg-[#FFF4E8]/50">
           <CardHeader>
             <CardTitle className="text-base font-bold text-[#5C3A21] flex items-center gap-2">

@@ -109,12 +109,6 @@ export const toNum = (v: unknown): number => {
  */
 export function calcTotalDespesasEstimadas(op: unknown): number {
   const estimated = getEstimatedCostsByCategory(op as any)
-  // Somente as categorias que representam despesas antes da venda/saldo devedor.
-  // getEstimatedCostsByCategory inclui 'Venda' que no cálculo individual contém corretagem + lucro imobiliário + saldo_devedor.
-  // Quando custos_estimados_planilha está presente, 'Venda' pode conter despesas específicas da planilha (ex: 2834.28).
-  // Mas a corretagem é calculada separadamente via comissao_corretor_percent e o saldo devedor via calcSaldoDevedorFinanciamento.
-  // Para evitar duplicar corretagem ou saldo devedor se a categoria Venda os incluiu,
-  // pegamos Aquisição + Tributos + Desocupação + Mensais.
   const { Aquisição = 0, Tributos = 0, Desocupação = 0, Mensais = 0 } = estimated
   const total = Aquisição + Tributos + Desocupação + Mensais
   return Math.round(total * 100) / 100
@@ -202,26 +196,35 @@ export function calcCapitalNecessario(op: {
  * comissão é subtraída explicitamente aqui, garantindo consistência com a
  * fórmula definida no Dashboard.
  */
-export function calcRetornoDinamico(op: {
-  valor_venda_com_desconto?: number | string | null
-  valor_mercado?: number | string | null
-  comissao_corretor_percent?: number | string | null
-  modalidade_financiamento?: 'À Vista' | 'SAC' | 'PRICE' | string
-  valor_arrematacao?: number | string | null
-  taxa_juros_financiamento?: number | string | null
-  prazo_financiamento?: number | string | null
-  parcelas_pagas?: number | string | null
-  percentual_entrada?: number | string | null
-  saldo_devedor?: number | string | null
-}): number {
+export function calcRetornoDinamico(
+  op: {
+    valor_venda_com_desconto?: number | string | null
+    valor_mercado?: number | string | null
+    comissao_corretor_percent?: number | string | null
+    modalidade_financiamento?: 'À Vista' | 'SAC' | 'PRICE' | string
+    valor_arrematacao?: number | string | null
+    taxa_juros_financiamento?: number | string | null
+    prazo_financiamento?: number | string | null
+    parcelas_pagas?: number | string | null
+    percentual_entrada?: number | string | null
+    saldo_devedor?: number | string | null
+    custos_estimados_planilha?: any
+  },
+  despesasReais?: number,
+): number {
   const valorVenda = toNum(op.valor_venda_com_desconto) || toNum(op.valor_mercado)
   const comissaoPercent =
-    op.comissao_corretor_percent != null ? toNum(op.comissao_corretor_percent) : 6
+    op.comissao_corretor_percent != null && op.comissao_corretor_percent !== ''
+      ? toNum(op.comissao_corretor_percent)
+      : 6
   const comissaoVenda = (comissaoPercent / 100) * valorVenda
-  const totalDespesas = calcTotalDespesasEstimadas(op)
+  const despesas =
+    typeof despesasReais === 'number' && despesasReais >= 0
+      ? despesasReais
+      : calcTotalDespesasEstimadas(op)
   const saldoDevedor = calcSaldoDevedorFinanciamento(op)
 
-  const retorno = valorVenda - comissaoVenda - totalDespesas - saldoDevedor
+  const retorno = valorVenda - comissaoVenda - despesas - saldoDevedor
   return Math.round(retorno * 100) / 100
 }
 

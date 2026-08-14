@@ -167,13 +167,9 @@ export function getEstimatedCostsByCategory(op?: any): Record<ExpenseCategory, n
   const prestacoesPagas = valorParcelaMensal * parcelasPagas
   const mensais = prestacoesPagas + condominioIptuMensal * prazo
 
-  // Venda
-  const corretagem = (comissaoCorretorPercent / 100) * valorVenda
-  // Lucro imobiliário: ganho de capital sobre a venda (já armazenado no registro
-  // quando disponível, senão estimado como venda - aquisição - tributos)
-  const lucroImobiliario =
-    num(op.ganho_capital_base) || Math.max(0, valorVenda - aquisicao - tributos)
-  const venda = corretagem + lucroImobiliario + saldoDevedor
+  // Venda (categoria do gráfico comparativo):
+  // O valor ESTIMADO da categoria Venda no gráfico comparativo de viabilidade é o Valor Total de Venda da oportunidade.
+  const venda = valorVenda
 
   return {
     Aquisição: Math.round(aquisicao * 100) / 100,

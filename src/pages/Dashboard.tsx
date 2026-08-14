@@ -116,7 +116,10 @@ export default function Dashboard() {
   }
 
   const totalInvestido = useMemo(
-    () => lancamentos.filter((l) => l.tipo === 'Despesa').reduce((acc, l) => acc + l.valor, 0),
+    () =>
+      lancamentos
+        .filter((l) => l.tipo === 'Despesa' && !isVendaReceita(l.descricao))
+        .reduce((acc, l) => acc + l.valor, 0),
     [lancamentos],
   )
 
@@ -147,19 +150,18 @@ export default function Dashboard() {
   )
 
   const chartDataBar = oportunidades.map((op) => {
-    // Retorno dinâmico: enquanto não houver receita de venda lançada
-    // (lançamento na categoria Venda com descrição "Venda" ou "Locação"),
-    // calcula-se o retorno a partir do valor estimado de venda menos as
-    // despesas, comissão e saldo devedor. Uma vez existente receita de
-    // venda, usa-se o retorno_estimado salvo no banco.
     const opLancamentos = lancamentos.filter((l) => l.oportunidade === op.id)
+    const despesasReaisOp = opLancamentos
+      .filter((l) => l.tipo === 'Despesa' && !isVendaReceita(l.descricao))
+      .reduce((acc, l) => acc + l.valor, 0)
     const temReceitaVenda = opLancamentos.some((l) => isVendaReceita(l.descricao))
     const retorno = temReceitaVenda
       ? op.retorno_estimado || op.maior_lucro_esperado || 0
-      : calcRetornoDinamico(op)
+      : calcRetornoDinamico(op, despesasReaisOp > 0 ? despesasReaisOp : undefined)
+    const investido = despesasReaisOp > 0 ? despesasReaisOp : calcCapitalNecessario(op)
     return {
       name: op.nome.length > 15 ? op.nome.slice(0, 15) + '...' : op.nome,
-      Investido: calcCapitalNecessario(op),
+      Investido: investido,
       Retorno: retorno,
     }
   })
