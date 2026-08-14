@@ -38,8 +38,10 @@ import {
   isVendaReceita,
   type ExpenseCategory,
 } from '@/lib/expense-categories'
-import { Filter } from 'lucide-react'
+import { Filter, Users } from 'lucide-react'
 import { calculateInstallment, calculateSaldoDevedor, FinancingParams } from '@/lib/financing-utils'
+import { primeiraLetraNome, sociosCobertosPorMarca } from '@/lib/participantes-utils'
+import { Badge } from '@/components/ui/badge'
 
 export default function OportunidadeDetalhe() {
   const { id } = useParams<{ id: string }>()
@@ -86,6 +88,58 @@ export default function OportunidadeDetalhe() {
       return cat === categoryFilter
     })
   }, [lancamentos, categoryFilter])
+
+  // Sócios/participantes da oportunidade (com fallback para o criador).
+  const participantesAtuais: { id: string; name?: string; email?: string }[] = useMemo(() => {
+    if (!op) return []
+    if (Array.isArray(op.expand?.participantes) && op.expand!.participantes.length > 0) {
+      return op.expand!.participantes.map((p) => ({ id: p.id, name: p.name, email: p.email }))
+    }
+    if (Array.isArray(op.participantes) && op.participantes.length > 0) {
+      return (op.participantes as string[]).map((pid) => ({ id: pid }))
+    }
+    return op.usuario ? [{ id: op.usuario }] : []
+  }, [op])
+
+  // Rateio de despesas por sócio: soma o valor de cada despesa dividido
+  // igualmente entre os sócios cobertos pela marca "quem_pagou".
+  const rateioPorSocio = useMemo(() => {
+    const totalSocios = participantesAtuais.length
+    const acc: Record<string, { valor: number; nome: string; letra: string }> = {}
+    participantesAtuais.forEach((p) => {
+      acc[p.id] = {
+        valor: 0,
+        nome: p.name || p.email || 'Sócio',
+        letra: primeiraLetraNome(p.name || p.email || '?'),
+      }
+    })
+    const despesas = lancamentos.filter((l) => l.tipo === 'Despesa')
+    despesas.forEach((l) => {
+      const cobertos = sociosCobertosPorMarca(l.quem_pagou, totalSocios)
+      if (cobertos <= 0 || totalSocios === 0) return
+      const parte = l.valor / cobertos
+      // "A" = 2 sócios; "T" = todos; letra individual = sócio com aquela letra.
+      if (l.quem_pagou === 'A' || l.quem_pagou === 'T') {
+        participantesAtuais.forEach((p) => {
+          if (acc[p.id]) acc[p.id].valor += parte
+        })
+      } else if (l.quem_pagou) {
+        const alvo = participantesAtuais.find(
+          (p) => primeiraLetraNome(p.name || p.email || '?') === l.quem_pagou,
+        )
+        if (alvo && acc[alvo.id]) acc[alvo.id].valor += l.valor
+      }
+    })
+    Object.keys(acc).forEach((k) => {
+      acc[k].valor = Math.round(acc[k].valor * 100) / 100
+    })
+    return acc
+  }, [lancamentos, participantesAtuais])
+
+  const totalDespesasRateio = useMemo(
+    () => lancamentos.filter((l) => l.tipo === 'Despesa').reduce((acc, l) => acc + l.valor, 0),
+    [lancamentos],
+  )
 
   if (loading || !op) {
     return <div className="py-12 text-center text-[#7A6A5A]">Carregando detalhes...</div>
@@ -154,6 +208,24 @@ export default function OportunidadeDetalhe() {
             )}
           </div>
           <p className="text-sm text-[#7A6A5A]">{op.endereco}</p>
+          {participantesAtuais.length > 0 && (
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              <Users className="w-3.5 h-3.5 text-[#7A6A5A]" />
+              <span className="text-xs text-[#7A6A5A]">Sócios:</span>
+              {participantesAtuais.map((p) => (
+                <Badge
+                  key={p.id}
+                  variant="secondary"
+                  className="bg-[#FFF4E8] text-[#5C3A21] border border-[#EDE4D8] gap-1"
+                >
+                  <span className="font-bold text-[#F97316]">
+                    {primeiraLetraNome(p.name || p.email || '?')}
+                  </span>
+                  {p.name || p.email || 'Sócio'}
+                </Badge>
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {relatorioUrl && (
@@ -294,6 +366,45 @@ export default function OportunidadeDetalhe() {
         </Card>
       </div>
 
+      {participantesAtuais.length > 1 && totalDespesasRateio > 0 && (
+        <Card className="border-[#EDE4D8] bg-[#FFF4E8]/50">
+          <CardHeader>
+            <CardTitle className="text-base font-bold text-[#5C3A21] flex items-center gap-2">
+              <Users className="w-5 h-5 text-[#F97316]" />
+              Rateio de Despesas por Sócio
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Object.entries(rateioPorSocio).map(([pid, info]) => {
+                const percent =
+                  totalDespesasRateio > 0 ? (info.valor / totalDespesasRateio) * 100 : 0
+                return (
+                  <div
+                    key={pid}
+                    className="p-4 bg-white rounded-lg border border-[#EDE4D8] flex items-center gap-3"
+                  >
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#F97316] text-white font-bold">
+                      {info.letra}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[#5C3A21] truncate">{info.nome}</p>
+                      <p className="text-lg font-bold text-[#2D1B0E]">{formatBRL(info.valor)}</p>
+                      <p className="text-xs text-[#7A6A5A]">{percent.toFixed(1)}% do total</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <p className="text-xs text-[#7A6A5A] mt-3">
+              Total de despesas considerado no rateio: {formatBRL(totalDespesasRateio)}. Letras
+              individuais atribuem o valor integral ao sócio; “A” (ambos) / “T” (todos) dividem
+              igualmente entre os sócios cobertos.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="border-[#EDE4D8]">
         <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-3">
           <CardTitle className="text-base font-bold text-[#5C3A21]">
@@ -333,6 +444,7 @@ export default function OportunidadeDetalhe() {
                   <TableHead>Data</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Descrição</TableHead>
+                  <TableHead className="text-center">Quem Pagou</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -349,6 +461,15 @@ export default function OportunidadeDetalhe() {
                       </span>
                     </TableCell>
                     <TableCell className="font-medium text-[#2D1B0E]">{l.descricao}</TableCell>
+                    <TableCell className="text-center">
+                      {l.tipo === 'Despesa' && l.quem_pagou ? (
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#FFF4E8] text-[#5C3A21] font-bold text-sm border border-[#EDE4D8]">
+                          {l.quem_pagou}
+                        </span>
+                      ) : (
+                        <span className="text-[#7A6A5A]">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right font-bold">{formatBRL(l.valor)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">

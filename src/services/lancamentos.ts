@@ -9,6 +9,8 @@ export interface Lancamento {
   valor: number
   data?: string
   categoria?: string
+  /** Primeira letra do sócio que pagou, ou "A" (ambos/2 sócios) / "T" (todos/>2 sócios). */
+  quem_pagou?: string
   created: string
   updated: string
   expand?: {

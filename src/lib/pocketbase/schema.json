@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-08-13T23:17:02.095Z",
+  "generatedAt": "2026-08-14T11:39:49.636Z",
   "collections": [
     {
       "name": "users",
       "type": "auth",
       "apiRules": {
-        "list": "id = @request.auth.id",
-        "view": "id = @request.auth.id",
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
         "create": "",
         "update": "id = @request.auth.id",
         "delete": "id = @request.auth.id"
@@ -48,8 +48,8 @@
       "name": "oportunidades",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && usuario = @request.auth.id",
-        "view": "@request.auth.id != '' && usuario = @request.auth.id",
+        "list": "@request.auth.id != '' && (usuario = @request.auth.id || participantes = @request.auth.id)",
+        "view": "@request.auth.id != '' && (usuario = @request.auth.id || participantes = @request.auth.id)",
         "create": "@request.auth.id != ''",
         "update": "@request.auth.id != '' && usuario = @request.auth.id",
         "delete": "@request.auth.id != '' && usuario = @request.auth.id"
@@ -360,6 +360,13 @@
           "type": "json",
           "required": false,
           "system": false
+        },
+        {
+          "name": "participantes",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
         }
       ],
       "indexes": [
@@ -371,11 +378,11 @@
       "name": "lancamentos",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && usuario = @request.auth.id",
-        "view": "@request.auth.id != '' && usuario = @request.auth.id",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != '' && usuario = @request.auth.id",
-        "delete": "@request.auth.id != '' && usuario = @request.auth.id"
+        "list": "@request.auth.id != '' && (usuario = @request.auth.id || oportunidade.participantes = @request.auth.id)",
+        "view": "@request.auth.id != '' && (usuario = @request.auth.id || oportunidade.participantes = @request.auth.id)",
+        "create": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes = @request.auth.id)",
+        "update": "@request.auth.id != '' && (usuario = @request.auth.id || oportunidade.usuario = @request.auth.id)",
+        "delete": "@request.auth.id != '' && (usuario = @request.auth.id || oportunidade.usuario = @request.auth.id)"
       },
       "fields": [
         {
@@ -437,6 +444,12 @@
           "required": false,
           "system": false,
           "selectValues": ["Aquisição", "Tributos", "Desocupação", "Mensais", "Venda"]
+        },
+        {
+          "name": "quem_pagou",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [

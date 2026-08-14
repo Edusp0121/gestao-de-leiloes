@@ -18,9 +18,11 @@ import {
 } from '@/components/ui/select'
 import { Plus, Pencil } from 'lucide-react'
 import { createLancamento, updateLancamento, Lancamento } from '@/services/lancamentos'
+import { getOportunidade, type UserRef } from '@/services/oportunidades'
 import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
 import { CATEGORY_DESCRIPTIONS } from '@/lib/expense-categories'
+import { buildQuemPagouOptions, defaultQuemPagou } from '@/lib/participantes-utils'
 
 const CATEGORIAS = ['Aquisição', 'Tributos', 'Desocupação', 'Mensais', 'Venda'] as const
 
@@ -47,11 +49,37 @@ export function LancamentoFormModal({
   const [descricao, setDescricao] = useState('')
   const [valor, setValor] = useState('')
   const [data, setData] = useState(new Date().toISOString().split('T')[0])
+  const [quemPagou, setQuemPagou] = useState('')
+  const [participantes, setParticipantes] = useState<UserRef[]>([])
+  const [loadingParticipantes, setLoadingParticipantes] = useState(false)
   const { toast } = useToast()
 
   const descriptionOptions = useMemo(() => {
     return CATEGORY_DESCRIPTIONS[categoria as keyof typeof CATEGORY_DESCRIPTIONS] || []
   }, [categoria])
+
+  const quemPagouOptions = useMemo(() => buildQuemPagouOptions(participantes), [participantes])
+
+  // Carrega os sócios da oportunidade selecionada para montar as opções de
+  // "Quem Pagou".
+  useEffect(() => {
+    if (!open || !oportunidadeId) {
+      setParticipantes([])
+      return
+    }
+    setLoadingParticipantes(true)
+    getOportunidade(oportunidadeId)
+      .then((op) => {
+        const parts = Array.isArray(op.expand?.participantes)
+          ? op.expand!.participantes
+          : Array.isArray(op.participantes)
+            ? (op.participantes as string[]).map((id) => ({ id }))
+            : []
+        setParticipantes(parts)
+      })
+      .catch(() => setParticipantes([]))
+      .finally(() => setLoadingParticipantes(false))
+  }, [open, oportunidadeId])
 
   useEffect(() => {
     if (open && editLancamento) {
@@ -66,6 +94,7 @@ export function LancamentoFormModal({
       setData(
         rawDate ? rawDate.split(' ')[0].split('T')[0] : new Date().toISOString().split('T')[0],
       )
+      setQuemPagou(editLancamento.quem_pagou || '')
     } else if (open && !editLancamento) {
       setOportunidadeId(defaultOportunidadeId || '')
       setTipo('Despesa')
@@ -73,8 +102,18 @@ export function LancamentoFormModal({
       setDescricao('')
       setValor('')
       setData(new Date().toISOString().split('T')[0])
+      setQuemPagou('')
     }
   }, [open, editLancamento, defaultOportunidadeId])
+
+  // Define o valor padrão de "Quem Pagou" assim que os participantes da
+  // oportunidade são carregados e o usuário ainda não escolheu um valor.
+  useEffect(() => {
+    if (!open) return
+    if (participantes.length === 0) return
+    if (editLancamento && editLancamento.quem_pagou) return
+    setQuemPagou(defaultQuemPagou(participantes))
+  }, [open, participantes, editLancamento])
 
   const handleTipoChange = (v: 'Despesa' | 'Receita') => {
     setTipo(v)
@@ -108,6 +147,7 @@ export function LancamentoFormModal({
         valor: Number(valor),
         data: data ? `${data} 00:00:00.000Z` : new Date().toISOString(),
         categoria: tipo === 'Despesa' ? categoria : 'Venda',
+        quem_pagou: tipo === 'Despesa' ? quemPagou || undefined : undefined,
       }
       if (editLancamento) {
         await updateLancamento(editLancamento.id, payload)
@@ -228,6 +268,36 @@ export function LancamentoFormModal({
               onChange={(e) => setValor(e.target.value)}
             />
           </div>
+          {tipo === 'Despesa' && (
+            <div className="space-y-2">
+              <Label>Quem Pagou</Label>
+              <Select
+                value={quemPagou}
+                onValueChange={setQuemPagou}
+                disabled={loadingParticipantes || quemPagouOptions.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={
+                      loadingParticipantes ? 'Carregando sócios...' : 'Selecione quem pagou'
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {quemPagouOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {quemPagouOptions.length === 0 && !loadingParticipantes && (
+                <p className="text-xs text-[#7A6A5A]">
+                  Selecione uma oportunidade com sócios cadastrados para definir quem pagou.
+                </p>
+              )}
+            </div>
+          )}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancelar

@@ -16,14 +16,18 @@ import {
   createOportunidade,
   getOportunidade,
   updateOportunidade,
+  getUsuarios,
   type Oportunidade,
+  type UserRef,
 } from '@/services/oportunidades'
 import { calculateMetrics } from '@/lib/calculator-utils'
 import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage, extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
 import { formatBRL, formatPercent } from '@/lib/formatters'
-import { FileUp, Calculator } from 'lucide-react'
+import { FileUp, Calculator, Users } from 'lucide-react'
 import { calculateInstallment, calculateSaldoDevedor, FinancingParams } from '@/lib/financing-utils'
+import { ParticipantesSelector } from '@/components/ParticipantesSelector'
+import pb from '@/lib/pocketbase/client'
 
 const AGENTES = ['Caixa', 'Bradesco', 'Itaú', 'Santander', 'Emgea', 'Direto', 'Outros']
 
@@ -92,18 +96,35 @@ export default function NovaAnalise() {
   const [relatorioFile, setRelatorioFile] = useState<File | null>(null)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [form, setForm] = useState({ ...DEFAULT_FORM })
+  const [usuarios, setUsuarios] = useState<UserRef[]>([])
+  const [participantes, setParticipantes] = useState<string[]>([])
+
+  const currentUserId = pb.authStore.record?.id
+
+  useEffect(() => {
+    getUsuarios()
+      .then(setUsuarios)
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     let active = true
     if (!id) {
       setForm({ ...DEFAULT_FORM })
+      // O criador é sempre participante.
+      setParticipantes(currentUserId ? [currentUserId] : [])
       setLoadingOp(false)
       return
     }
     setLoadingOp(true)
     getOportunidade(id)
       .then((op) => {
-        if (active) setForm(formFromOportunidade(op))
+        if (!active) return
+        setForm(formFromOportunidade(op))
+        const parts = Array.isArray(op.participantes) ? op.participantes : []
+        setParticipantes(
+          currentUserId && !parts.includes(currentUserId) ? [...parts, currentUserId] : parts,
+        )
       })
       .catch(() => {
         if (active) {
@@ -121,7 +142,7 @@ export default function NovaAnalise() {
     return () => {
       active = false
     }
-  }, [id])
+  }, [id, currentUserId])
 
   const handleChange = (field: string, value: any) => {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -187,6 +208,12 @@ export default function NovaAnalise() {
       Object.entries(computed).forEach(([key, val]) => {
         formData.append(key, String(val))
       })
+      // Participantes (garante o criador incluso).
+      const parts =
+        currentUserId && !participantes.includes(currentUserId)
+          ? [...participantes, currentUserId]
+          : participantes
+      parts.forEach((pid) => formData.append('participantes', pid))
       if (relatorioFile) {
         formData.append('relatorio_viabilidade', relatorioFile)
       }
@@ -323,6 +350,23 @@ export default function NovaAnalise() {
               </SelectContent>
             </Select>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-[#EDE4D8]">
+        <CardHeader>
+          <CardTitle className="text-base font-bold text-[#5C3A21] flex items-center gap-2">
+            <Users className="w-5 h-5 text-[#F97316]" />
+            Sócios / Participantes
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ParticipantesSelector
+            usuarios={usuarios}
+            selected={participantes}
+            creatorId={currentUserId}
+            onChange={setParticipantes}
+          />
         </CardContent>
       </Card>
 

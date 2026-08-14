@@ -163,6 +163,7 @@ export default function Lancamentos() {
                   <TableHead>Oportunidade</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Descrição</TableHead>
+                  <TableHead className="text-center">Quem Pagou</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -182,6 +183,15 @@ export default function Lancamentos() {
                       </span>
                     </TableCell>
                     <TableCell className="text-sm">{l.descricao}</TableCell>
+                    <TableCell className="text-center">
+                      {l.tipo === 'Despesa' && l.quem_pagou ? (
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#FFF4E8] text-[#5C3A21] font-bold text-sm border border-[#EDE4D8]">
+                          {l.quem_pagou}
+                        </span>
+                      ) : (
+                        <span className="text-[#7A6A5A]">—</span>
+                      )}
+                    </TableCell>
                     <TableCell
                       className={`text-right font-bold ${l.tipo === 'Despesa' ? 'text-red-600' : 'text-green-600'}`}
                     >
