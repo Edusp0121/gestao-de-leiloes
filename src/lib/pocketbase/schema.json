@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-14T11:39:49.636Z",
+  "generatedAt": "2026-08-14T11:50:22.754Z",
   "collections": [
     {
       "name": "users",
@@ -37,6 +37,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "admin",
+          "type": "bool",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -48,11 +54,11 @@
       "name": "oportunidades",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && (usuario = @request.auth.id || participantes = @request.auth.id)",
-        "view": "@request.auth.id != '' && (usuario = @request.auth.id || participantes = @request.auth.id)",
+        "list": "@request.auth.id != '' && (usuario = @request.auth.id || participantes = @request.auth.id || @request.auth.admin = true)",
+        "view": "@request.auth.id != '' && (usuario = @request.auth.id || participantes = @request.auth.id || @request.auth.admin = true)",
         "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != '' && usuario = @request.auth.id",
-        "delete": "@request.auth.id != '' && usuario = @request.auth.id"
+        "update": "@request.auth.id != '' && (usuario = @request.auth.id || @request.auth.admin = true)",
+        "delete": "@request.auth.id != '' && (usuario = @request.auth.id || @request.auth.admin = true)"
       },
       "fields": [
         {
@@ -378,11 +384,11 @@
       "name": "lancamentos",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && (usuario = @request.auth.id || oportunidade.participantes = @request.auth.id)",
-        "view": "@request.auth.id != '' && (usuario = @request.auth.id || oportunidade.participantes = @request.auth.id)",
-        "create": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes = @request.auth.id)",
-        "update": "@request.auth.id != '' && (usuario = @request.auth.id || oportunidade.usuario = @request.auth.id)",
-        "delete": "@request.auth.id != '' && (usuario = @request.auth.id || oportunidade.usuario = @request.auth.id)"
+        "list": "@request.auth.id != '' && (usuario = @request.auth.id || oportunidade.participantes = @request.auth.id || @request.auth.admin = true)",
+        "view": "@request.auth.id != '' && (usuario = @request.auth.id || oportunidade.participantes = @request.auth.id || @request.auth.admin = true)",
+        "create": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes = @request.auth.id || @request.auth.admin = true)",
+        "update": "@request.auth.id != '' && (usuario = @request.auth.id || oportunidade.usuario = @request.auth.id || @request.auth.admin = true)",
+        "delete": "@request.auth.id != '' && (usuario = @request.auth.id || oportunidade.usuario = @request.auth.id || @request.auth.admin = true)"
       },
       "fields": [
         {
