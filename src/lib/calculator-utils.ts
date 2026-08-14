@@ -141,16 +141,15 @@ export function calcSaldoDevedorFinanciamento(op: {
   saldo_devedor?: number | string | null
 }): number {
   const modalidade = op.modalidade_financiamento
-  if (!modalidade || modalidade === 'À Vista') return 0
+  const prazo = toNum(op.prazo_financiamento)
 
-  const saldoStored = toNum(op.saldo_devedor)
-  if (saldoStored > 0) return saldoStored
+  if (!modalidade || modalidade === 'À Vista' || prazo <= 0) return 0
 
   const annualRate = toNum(op.taxa_juros_financiamento) || 8
   const params: FinancingParams = {
     principal: toNum(op.valor_arrematacao),
     annualRate,
-    termMonths: toNum(op.prazo_financiamento) || 120,
+    termMonths: prazo,
     paymentsMade: toNum(op.parcelas_pagas),
     method: modalidade === 'SAC' ? 'SAC' : 'PRICE',
     entryPercent: op.percentual_entrada == null ? 10 : toNum(op.percentual_entrada),
