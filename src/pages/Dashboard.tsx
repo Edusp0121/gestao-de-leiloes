@@ -38,7 +38,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { getOportunidades, deleteOportunidade, Oportunidade } from '@/services/oportunidades'
+import {
+  getOportunidades,
+  deleteOportunidade,
+  canEditOp,
+  Oportunidade,
+} from '@/services/oportunidades'
 import { getLancamentos, Lancamento } from '@/services/lancamentos'
 import { formatBRL, formatPercent, formatDateShort } from '@/lib/formatters'
 import { StatusBadge } from '@/components/StatusBadge'
@@ -441,55 +446,61 @@ export default function Dashboard() {
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-blue-600 hover:bg-blue-50"
-                              title="Editar oportunidade"
-                              onClick={() => navigate(`/nova-analise/${op.id}`)}
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <AlertDialog
-                              open={deleteDialogOpen && deletingId === op.id}
-                              onOpenChange={(open) => {
-                                setDeleteDialogOpen(open)
-                                if (!open) setDeletingId(null)
-                              }}
-                            >
-                              <AlertDialogTrigger asChild>
+                            {canEditOp(op) ? (
+                              <>
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="text-red-500 hover:bg-red-50"
-                                  title="Excluir oportunidade"
-                                  onClick={() => {
-                                    setDeletingId(op.id)
-                                    setDeleteDialogOpen(true)
+                                  className="text-blue-600 hover:bg-blue-50"
+                                  title="Editar oportunidade"
+                                  onClick={() => navigate(`/nova-analise/${op.id}`)}
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <AlertDialog
+                                  open={deleteDialogOpen && deletingId === op.id}
+                                  onOpenChange={(open) => {
+                                    setDeleteDialogOpen(open)
+                                    if (!open) setDeletingId(null)
                                   }}
                                 >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Excluir oportunidade</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Tem certeza que deseja excluir esta oportunidade? Todos os
-                                    lançamentos associados também serão removidos.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={handleDelete}
-                                    className="bg-red-600 hover:bg-red-700 text-white"
-                                  >
-                                    Excluir
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="text-red-500 hover:bg-red-50"
+                                      title="Excluir oportunidade"
+                                      onClick={() => {
+                                        setDeletingId(op.id)
+                                        setDeleteDialogOpen(true)
+                                      }}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Excluir oportunidade</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Tem certeza que deseja excluir esta oportunidade? Todos os
+                                        lançamentos associados também serão removidos.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={handleDelete}
+                                        className="bg-red-600 hover:bg-red-700 text-white"
+                                      >
+                                        Excluir
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </>
+                            ) : (
+                              <span className="text-xs text-[#7A6A5A]">—</span>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>

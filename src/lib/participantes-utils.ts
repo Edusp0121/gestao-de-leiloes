@@ -11,13 +11,13 @@ export interface QuemPagouOption {
 
 /**
  * Gera as opções do campo "Quem Pagou" para uma oportunidade com base nos
- * seus sócios (participantes).
+ * seus sócios (PARTICIPANTES apenas — observadores nunca entram).
  *
  * Regras:
- * - Para cada sócio, uma opção com a PRIMEIRA letra do primeiro nome dele.
- * - Se houver exatamente 2 sócios: adiciona "A" = Ambos.
- * - Se houver mais de 2 sócios: adiciona "T" = Todos.
- * - Valor padrão: "A" (2 sócios) ou "T" (>2 sócios).
+ * - Para cada participante, uma opção com a PRIMEIRA letra do primeiro nome.
+ * - Se houver exatamente 2 participantes: adiciona "A" = Ambos.
+ * - Se houver mais de 2 participantes: adiciona "T" = Todos.
+ * - Para 1 participante: apenas a letra dele (sem "A"/"T").
  */
 export function buildQuemPagouOptions(
   participantes: UserRef[] | undefined | null,
@@ -37,14 +37,21 @@ export function buildQuemPagouOptions(
   return options
 }
 
-/** Valor padrão do campo ao abrir o formulário. */
+/**
+ * Valor padrão do campo ao abrir o formulário.
+ *
+ * - 0 participantes: '' (vazio).
+ * - 1 participante: a letra daquele único participante (NUNCA "A").
+ * - 2 participantes: "A" (Ambos).
+ * - 3+ participantes: "T" (Todos).
+ */
 export function defaultQuemPagou(participantes: UserRef[] | undefined | null): string {
-  const count = (participantes || []).filter(Boolean).length
+  const socios = (participantes || []).filter(Boolean)
+  const count = socios.length
   if (count > 2) return 'T'
   if (count === 2) return 'A'
-  // 0 ou 1 sócio: sem opção de grupo — retorna a letra do único sócio (ou vazio).
   if (count === 1) {
-    return primeiraLetraNome(participantes![0].name || participantes![0].email || '?')
+    return primeiraLetraNome(socios[0].name || socios[0].email || '?')
   }
   return ''
 }
@@ -57,9 +64,11 @@ export function primeiraLetraNome(nome: string): string {
 }
 
 /**
- * Dado o valor de "quem_pagou" e a lista de sócios, retorna quantos sócios
- * aquela marcação representa (para rateio). Letras individuais = 1; "A" = 2;
- * "T" = total de sócios.
+ * Dado o valor de "quem_pagou" e o número de participantes, retorna quantos
+ * participantes aquela marcação representa (para rateio). Letras individuais
+ * = 1; "A" = 2 (ambos); "T" = total de participantes.
+ *
+ * Observadores nunca contam.
  */
 export function sociosCobertosPorMarca(
   marca: string | undefined | null,

@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select'
 import { Plus, Pencil } from 'lucide-react'
 import { createLancamento, updateLancamento, Lancamento } from '@/services/lancamentos'
-import { getOportunidade, type UserRef } from '@/services/oportunidades'
+import { getOportunidade, toIdArray, type UserRef } from '@/services/oportunidades'
 import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
 import { CATEGORY_DESCRIPTIONS } from '@/lib/expense-categories'
@@ -58,23 +58,24 @@ export function LancamentoFormModal({
     return CATEGORY_DESCRIPTIONS[categoria as keyof typeof CATEGORY_DESCRIPTIONS] || []
   }, [categoria])
 
-  // Opções de "Quem Pagou". Prioriza os sócios carregados da oportunidade; se
-  // eles não estiverem disponíveis (falha de carregamento ou lançamento antigo
-  // sem sócios vinculados), monta um fallback mínimo a partir do valor atual do
-  // campo + marcadores de grupo, garantindo que o Select sempre seja usável.
+  // Opções de "Quem Pagou". Prioriza os sócios PARTICIPANTES carregados da
+  // oportunidade (observadores NÃO entram). Se eles não estiverem disponíveis
+  // (falha de carregamento ou lançamento antigo sem sócios vinculados), monta
+  // um fallback mínimo a partir do valor atual do campo, garantindo que o
+  // Select sempre seja usável e clicável.
   const quemPagouOptions = useMemo(() => {
     const fromParticipantes = buildQuemPagouOptions(participantes)
     if (fromParticipantes.length > 0) return fromParticipantes
 
-    // Fallback: sem participantes carregados. Inclui os marcadores de grupo
-    // (Ambos/Todos) e, se houver, a letra já presente no lançamento antigo.
-    const fallback: { value: string; label: string }[] = [
-      { value: 'A', label: 'A — Ambos' },
-      { value: 'T', label: 'T — Todos' },
-    ]
-    if (quemPagou && !fallback.some((o) => o.value === quemPagou)) {
-      fallback.unshift({ value: quemPagou, label: `${quemPagou} — Sócio` })
+    // Fallback: sem participantes carregados. Inclui a letra já presente no
+    // lançamento antigo (se houver) e os marcadores de grupo "A"/"T" para que
+    // o campo nunca fique vazio/travado.
+    const fallback: { value: string; label: string }[] = []
+    if (quemPagou && !['A', 'T'].includes(quemPagou)) {
+      fallback.push({ value: quemPagou, label: `${quemPagou} — Sócio` })
     }
+    fallback.push({ value: 'A', label: 'A — Ambos' })
+    fallback.push({ value: 'T', label: 'T — Todos' })
     return fallback
   }, [participantes, quemPagou])
 
@@ -88,11 +89,12 @@ export function LancamentoFormModal({
     setLoadingParticipantes(true)
     getOportunidade(oportunidadeId)
       .then((op) => {
-        const parts = Array.isArray(op.expand?.participantes)
-          ? op.expand!.participantes
-          : Array.isArray(op.participantes)
-            ? (op.participantes as string[]).map((id) => ({ id }))
-            : []
+        // Apenas PARTICIPANTES entram em "Quem Pagou" (observadores nunca).
+        const expanded = op.expand?.participantes
+        const parts: UserRef[] =
+          Array.isArray(expanded) && expanded.length > 0
+            ? expanded.map((p) => ({ id: p.id, name: p.name, email: p.email }))
+            : toIdArray(op.participantes).map((id) => ({ id }))
         setParticipantes(parts)
       })
       .catch(() => setParticipantes([]))
@@ -125,11 +127,11 @@ export function LancamentoFormModal({
   }, [open, editLancamento, defaultOportunidadeId])
 
   // Define o valor padrão de "Quem Pagou":
-  // - Em lançamentos antigos com `quem_pagou` vazio, preenche automaticamente
-  //   com "A" (2 sócios) ou "T" (>2 sócios) assim que os participantes
-  //   carregam. Se os participantes não carregarem, usa "A" como fallback
-  //   (caso mais comum) para que o campo nunca fique vazio/travado.
-  // - Em novos lançamentos, só preenche quando houver participantes.
+  // - Lançamento antigo COM `quem_pagou`: mantém o valor salvo.
+  // - Lançamento antigo SEM `quem_pagou`: preenche automaticamente com base
+  //   nos participantes carregados ("A"/"T"/letra única). Se os participantes
+  //   não carregarem, usa "A" como fallback para não travar o campo.
+  // - Novo lançamento: preenche com o default dos participantes ("A"/"T"/letra).
   useEffect(() => {
     if (!open) return
     if (editLancamento && editLancamento.quem_pagou) return

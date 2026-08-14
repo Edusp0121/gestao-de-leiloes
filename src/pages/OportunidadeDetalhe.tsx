@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Download, ArrowLeft, Trash2, Award } from 'lucide-react'
+import { Download, ArrowLeft, Trash2, Award, Eye } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -22,6 +22,10 @@ import {
   getOportunidades,
   getOportunidade,
   getRelatorioUrl,
+  toIdArray,
+  canEditOp,
+  canManageLancamentos,
+  userRoleOnOp,
   Oportunidade,
 } from '@/services/oportunidades'
 import { getLancamentos, deleteLancamento, Lancamento } from '@/services/lancamentos'
@@ -89,17 +93,33 @@ export default function OportunidadeDetalhe() {
     })
   }, [lancamentos, categoryFilter])
 
-  // Sócios/participantes da oportunidade (com fallback para o criador).
+  // Sócios PARTICIPANTES da oportunidade (observadores nunca entram no
+  // rateio nem na lista de sócios). Sempre trata como array.
   const participantesAtuais: { id: string; name?: string; email?: string }[] = useMemo(() => {
     if (!op) return []
-    if (Array.isArray(op.expand?.participantes) && op.expand!.participantes.length > 0) {
-      return op.expand!.participantes.map((p) => ({ id: p.id, name: p.name, email: p.email }))
+    const expanded = op.expand?.participantes
+    if (Array.isArray(expanded) && expanded.length > 0) {
+      return expanded.map((p) => ({ id: p.id, name: p.name, email: p.email }))
     }
-    if (Array.isArray(op.participantes) && op.participantes.length > 0) {
-      return (op.participantes as string[]).map((pid) => ({ id: pid }))
-    }
+    const ids = toIdArray(op.participantes)
+    if (ids.length > 0) return ids.map((pid) => ({ id: pid }))
     return op.usuario ? [{ id: op.usuario }] : []
   }, [op])
+
+  // Observadores da oportunidade (apenas para exibição).
+  const observadoresAtuais: { id: string; name?: string; email?: string }[] = useMemo(() => {
+    if (!op) return []
+    const expanded = op.expand?.observadores
+    if (Array.isArray(expanded) && expanded.length > 0) {
+      return expanded.map((p) => ({ id: p.id, name: p.name, email: p.email }))
+    }
+    return toIdArray(op.observadores).map((pid) => ({ id: pid }))
+  }, [op])
+
+  // Permissões: observadores não editam nem gerenciam lançamentos.
+  const podeEditar = op ? canEditOp(op) : false
+  const podeGerenciarLancamentos = op ? canManageLancamentos(op) : false
+  const isObserver = op ? userRoleOnOp(op) === 'observer' : false
 
   // Rateio de despesas por sócio: soma o valor de cada despesa dividido
   // igualmente entre os sócios cobertos pela marca "quem_pagou".
@@ -211,17 +231,32 @@ export default function OportunidadeDetalhe() {
           {participantesAtuais.length > 0 && (
             <div className="flex items-center gap-1.5 mt-2 flex-wrap">
               <Users className="w-3.5 h-3.5 text-[#7A6A5A]" />
-              <span className="text-xs text-[#7A6A5A]">Sócios:</span>
+              <span className="text-xs text-[#7A6A5A]">Participantes:</span>
               {participantesAtuais.map((p) => (
                 <Badge
                   key={p.id}
                   variant="secondary"
-                  className="bg-[#FFF4E8] text-[#5C3A21] border border-[#EDE4D8] gap-1"
+                  className="bg-[#DCFCE7] text-[#166534] border border-[#86EFAC] gap-1"
                 >
-                  <span className="font-bold text-[#F97316]">
+                  <span className="font-bold text-[#16A34A]">
                     {primeiraLetraNome(p.name || p.email || '?')}
                   </span>
                   {p.name || p.email || 'Sócio'}
+                </Badge>
+              ))}
+            </div>
+          )}
+          {observadoresAtuais.length > 0 && (
+            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+              <Eye className="w-3.5 h-3.5 text-[#7A6A5A]" />
+              <span className="text-xs text-[#7A6A5A]">Observadores:</span>
+              {observadoresAtuais.map((p) => (
+                <Badge
+                  key={p.id}
+                  variant="secondary"
+                  className="bg-[#F1F5F9] text-[#475569] border border-[#CBD5E1] gap-1"
+                >
+                  {p.name || p.email || 'Observador'}
                 </Badge>
               ))}
             </div>
@@ -238,12 +273,19 @@ export default function OportunidadeDetalhe() {
               </Button>
             </a>
           )}
-          <LancamentoFormModal
-            oportunidades={allOps}
-            defaultOportunidadeId={op.id}
-            onSuccess={loadData}
-            triggerText="Adicionar Lançamento"
-          />
+          {podeGerenciarLancamentos && (
+            <LancamentoFormModal
+              oportunidades={allOps}
+              defaultOportunidadeId={op.id}
+              onSuccess={loadData}
+              triggerText="Adicionar Lançamento"
+            />
+          )}
+          {isObserver && (
+            <span className="inline-flex items-center gap-1 text-xs text-[#64748B] bg-[#F1F5F9] border border-[#CBD5E1] px-2.5 py-1 rounded-full">
+              <Eye className="w-3.5 h-3.5" /> Modo observador (somente leitura)
+            </span>
+          )}
         </div>
       </div>
 
@@ -329,18 +371,22 @@ export default function OportunidadeDetalhe() {
           <CardContent className="space-y-3 text-sm">
             <div className="flex justify-between items-center py-1 border-b border-[#EDE4D8]">
               <span className="text-[#7A6A5A]">Modalidade:</span>
-              <Select
-                value={financingMethod}
-                onValueChange={(v) => setFinancingMethod(v as 'SAC' | 'PRICE')}
-              >
-                <SelectTrigger className="w-28 h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PRICE">Price</SelectItem>
-                  <SelectItem value="SAC">SAC</SelectItem>
-                </SelectContent>
-              </Select>
+              {podeEditar ? (
+                <Select
+                  value={financingMethod}
+                  onValueChange={(v) => setFinancingMethod(v as 'SAC' | 'PRICE')}
+                >
+                  <SelectTrigger className="w-28 h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PRICE">Price</SelectItem>
+                    <SelectItem value="SAC">SAC</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <span className="font-semibold">{financingMethod === 'SAC' ? 'SAC' : 'Price'}</span>
+              )}
             </div>
             <div className="flex justify-between py-1 border-b border-[#EDE4D8]">
               <span className="text-[#7A6A5A]">Valor da Parcela Mensal:</span>
@@ -371,7 +417,7 @@ export default function OportunidadeDetalhe() {
           <CardHeader>
             <CardTitle className="text-base font-bold text-[#5C3A21] flex items-center gap-2">
               <Users className="w-5 h-5 text-[#F97316]" />
-              Rateio de Despesas por Sócio
+              Rateio de Despesas por Participante
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -473,19 +519,25 @@ export default function OportunidadeDetalhe() {
                     <TableCell className="text-right font-bold">{formatBRL(l.valor)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <LancamentoFormModal
-                          oportunidades={allOps}
-                          editLancamento={l}
-                          onSuccess={loadData}
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-red-500 hover:bg-red-50"
-                          onClick={() => handleDeleteLancamento(l.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        {podeGerenciarLancamentos ? (
+                          <>
+                            <LancamentoFormModal
+                              oportunidades={allOps}
+                              editLancamento={l}
+                              onSuccess={loadData}
+                            />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-red-500 hover:bg-red-50"
+                              onClick={() => handleDeleteLancamento(l.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </>
+                        ) : (
+                          <span className="text-xs text-[#7A6A5A]">—</span>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

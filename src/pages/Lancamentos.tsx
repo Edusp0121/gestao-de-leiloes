@@ -11,7 +11,12 @@ import {
 import { Button } from '@/components/ui/button'
 import { Trash2, Wallet } from 'lucide-react'
 import { getLancamentos, deleteLancamento, Lancamento } from '@/services/lancamentos'
-import { getOportunidades, Oportunidade } from '@/services/oportunidades'
+import {
+  getOportunidades,
+  canManageLancamentos,
+  isCurrentUserAdmin,
+  Oportunidade,
+} from '@/services/oportunidades'
 import { formatBRL, formatDate } from '@/lib/formatters'
 import { LancamentoFormModal } from '@/components/LancamentoFormModal'
 import { useToast } from '@/hooks/use-toast'
@@ -64,6 +69,22 @@ export default function Lancamentos() {
     .filter((l) => l.tipo === 'Receita')
     .reduce((acc, l) => acc + l.valor, 0)
 
+  // Mapa de id da oportunidade → pode gerenciar lançamentos (admin/criador/participante).
+  // Observadores não editam/excluem/criam lançamentos.
+  const canManageByOp = useMemo(() => {
+    const m: Record<string, boolean> = {}
+    oportunidades.forEach((op) => {
+      m[op.id] = canManageLancamentos(op)
+    })
+    return m
+  }, [oportunidades])
+
+  const isAdmin = isCurrentUserAdmin()
+  const podeCriarAlgumLancamento = useMemo(
+    () => isAdmin || Object.values(canManageByOp).some(Boolean),
+    [canManageByOp, isAdmin],
+  )
+
   const compChartData = useMemo(() => {
     const estimatedTotals = EXPENSE_CATEGORIES.reduce(
       (acc, cat) => ({ ...acc, [cat]: 0 }),
@@ -94,7 +115,9 @@ export default function Lancamentos() {
           <h1 className="text-2xl font-bold text-[#5C3A21]">Lançamentos Financeiros</h1>
           <p className="text-sm text-[#7A6A5A]">Controle de despesas e receitas por oportunidade</p>
         </div>
-        <LancamentoFormModal oportunidades={oportunidades} onSuccess={loadData} />
+        {podeCriarAlgumLancamento && (
+          <LancamentoFormModal oportunidades={oportunidades} onSuccess={loadData} />
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
