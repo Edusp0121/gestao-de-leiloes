@@ -82,9 +82,14 @@ export function defaultQuemPagou(participantes: UserRef[] | undefined | null): s
 
 /** Primeira letra (maiúscula) do primeiro nome. */
 export function primeiraLetraNome(nome: string): string {
-  const trimmed = (nome || '').trim()
+  let trimmed = (nome || '').trim()
   if (!trimmed || trimmed === '?') return '?'
-  return trimmed.charAt(0).toUpperCase()
+  // Se for um e-mail sem name, pega a primeira letra antes ou do e-mail
+  if (trimmed.includes('@')) {
+    trimmed = trimmed.split('@')[0]
+  }
+  const char = trimmed.charAt(0).toUpperCase()
+  return char && char !== '?' ? char : '?'
 }
 
 /**

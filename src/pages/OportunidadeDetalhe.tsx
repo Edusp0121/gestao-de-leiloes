@@ -26,6 +26,7 @@ import {
   canEditOp,
   canManageLancamentos,
   userRoleOnOp,
+  getUsuarios,
   Oportunidade,
 } from '@/services/oportunidades'
 import { getLancamentos, deleteLancamento, Lancamento } from '@/services/lancamentos'
@@ -93,6 +94,33 @@ export default function OportunidadeDetalhe() {
     })
   }, [lancamentos, categoryFilter])
 
+  const [usuariosCache, setUsuariosCache] = useState<
+    Map<string, { id: string; name?: string; email?: string }>
+  >(new Map())
+
+  // Busca lista global de usuários se faltar nome/email nos expand do PocketBase
+  useEffect(() => {
+    if (!op) return
+    const allUserIds = new Set<string>()
+    if (op.usuario) allUserIds.add(op.usuario)
+    toIdArray(op.participantes).forEach((id) => allUserIds.add(id))
+    toIdArray(op.observadores).forEach((id) => allUserIds.add(id))
+
+    if (allUserIds.size === 0) return
+
+    getUsuarios()
+      .then((usersList) => {
+        const newCache = new Map<string, { id: string; name?: string; email?: string }>()
+        usersList.forEach((u) => {
+          if (u.id) {
+            newCache.set(u.id, { id: u.id, name: u.name, email: u.email })
+          }
+        })
+        setUsuariosCache(newCache)
+      })
+      .catch(() => {})
+  }, [op])
+
   // Sócios PARTICIPANTES da oportunidade (observadores nunca entram no
   // rateio nem na lista de sócios). Inclui o criador e participantes.
   const participantesAtuais: { id: string; name?: string; email?: string }[] = useMemo(() => {
@@ -118,18 +146,33 @@ export default function OportunidadeDetalhe() {
     if (op.usuario) allUserIds.add(op.usuario)
     toIdArray(op.participantes).forEach((id) => allUserIds.add(id))
 
-    return Array.from(allUserIds).map((id) => knownUsers.get(id) || { id })
-  }, [op])
+    return Array.from(allUserIds).map((id) => {
+      const fromExpand = knownUsers.get(id)
+      const fromCache = usuariosCache.get(id)
+      const name = fromExpand?.name || fromCache?.name
+      const email = fromExpand?.email || fromCache?.email
+      return { id, name, email }
+    })
+  }, [op, usuariosCache])
 
   // Observadores da oportunidade (apenas para exibição).
   const observadoresAtuais: { id: string; name?: string; email?: string }[] = useMemo(() => {
     if (!op) return []
-    const expanded = op.expand?.observadores
-    if (Array.isArray(expanded) && expanded.length > 0) {
-      return expanded.map((p) => ({ id: p.id, name: p.name, email: p.email }))
+    const knownUsers = new Map<string, { id: string; name?: string; email?: string }>()
+    if (Array.isArray(op.expand?.observadores)) {
+      op.expand!.observadores.forEach((p) => {
+        if (p?.id) knownUsers.set(p.id, { id: p.id, name: p.name, email: p.email })
+      })
     }
-    return toIdArray(op.observadores).map((pid) => ({ id: pid }))
-  }, [op])
+
+    return toIdArray(op.observadores).map((id) => {
+      const fromExpand = knownUsers.get(id)
+      const fromCache = usuariosCache.get(id)
+      const name = fromExpand?.name || fromCache?.name
+      const email = fromExpand?.email || fromCache?.email
+      return { id, name, email }
+    })
+  }, [op, usuariosCache])
 
   // Permissões: observadores não editam nem gerenciam lançamentos.
   const podeEditar = op ? canEditOp(op) : false
