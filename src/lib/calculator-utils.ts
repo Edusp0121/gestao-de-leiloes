@@ -134,6 +134,16 @@ export function calcSaldoDevedorFinanciamento(op: {
   percentual_entrada?: number | string | null
   saldo_devedor?: number | string | null
 }): number {
+  // Se o registro já possuir `saldo_devedor` calculado (e positivo),
+  // usamos esse valor autoritativo — a página de detalhes já o calcula
+  // (com percentual_entrada=10% como padrão) e o repassa no objeto `op`.
+  // Recalcular do zero aqui (com percentual_entrada=0 quando o campo não
+  // está definido no banco) geraria um saldo devedor maior e incorreto,
+  // propagando o erro para o Retorno Estimado.
+  if (toNum(op.saldo_devedor) > 0) {
+    return Math.round(toNum(op.saldo_devedor) * 100) / 100
+  }
+
   const modalidade = op.modalidade_financiamento
   const prazo = toNum(op.prazo_financiamento)
   const parcelasPagas = toNum(op.parcelas_pagas)
@@ -152,7 +162,14 @@ export function calcSaldoDevedorFinanciamento(op: {
     termMonths: prazoEfetivo,
     paymentsMade: parcelasPagas,
     method: modalidade === 'SAC' ? 'SAC' : 'PRICE',
-    entryPercent: op.percentual_entrada == null ? 10 : toNum(op.percentual_entrada),
+    // Quando `percentual_entrada` é nulo/undefined ou 0 (campo não definido
+    // no banco), usamos 10% como padrão — mesmo comportamento de
+    // `calculateSaldoDevedor` (financing-utils). Tratar 0 como literal
+    // geraria saldo devedor maior que o correto.
+    entryPercent:
+      op.percentual_entrada == null || toNum(op.percentual_entrada) === 0
+        ? 10
+        : toNum(op.percentual_entrada),
   }
   return calculateSaldoDevedor(params)
 }

@@ -45,7 +45,7 @@ import {
 } from '@/lib/expense-categories'
 import { Filter, Users } from 'lucide-react'
 import { calculateInstallment, calculateSaldoDevedor, FinancingParams } from '@/lib/financing-utils'
-import { toNum, calcRetornoDinamico } from '@/lib/calculator-utils'
+import { toNum, calcRetornoDinamico, calcCapitalNecessario } from '@/lib/calculator-utils'
 import { primeiraLetraNome, sociosCobertosPorMarca } from '@/lib/participantes-utils'
 import { Badge } from '@/components/ui/badge'
 import pb from '@/lib/pocketbase/client'
@@ -316,6 +316,22 @@ export default function OportunidadeDetalhe() {
     ? toNum(op.retorno_estimado) || toNum(op.maior_lucro_esperado)
     : calcRetornoDinamico({ ...op, saldo_devedor: calculatedSaldoDevedor }, totalInvestidoReal)
 
+  // Total Investido (Previsto): capital necessário estimado + corretagem + IR.
+  // - calcCapitalNecessario já soma todas as categorias estimadas (inclui o
+  //   saldo devedor nas categorias de aquisição).
+  // - corretagem = valor_venda_com_desconto * (comissao_corretor_percent / 100)
+  // - IR = ir_valor (campo do banco), se houver.
+  const totalInvestidoPrevisto = (() => {
+    const opComSaldo = { ...op, saldo_devedor: calculatedSaldoDevedor }
+    const capital = calcCapitalNecessario(opComSaldo as any)
+    const valorVenda = toNum(op.valor_venda_com_desconto) || toNum(op.valor_mercado)
+    const corretagemPercent = toNum(op.comissao_corretor_percent)
+    const corretagem = corretagemPercent > 0 ? (corretagemPercent / 100) * valorVenda : 0
+    const ir = toNum(op.ir_valor)
+    const total = capital + corretagem + ir
+    return Math.round(total * 100) / 100
+  })()
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -397,7 +413,18 @@ export default function OportunidadeDetalhe() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Card className="bg-white border-[#EDE4D8]">
+          <CardContent className="pt-4">
+            <p className="text-xs text-[#7A6A5A] uppercase font-semibold">
+              Valor Total Investido (Previsto)
+            </p>
+            <p className="text-xl font-bold text-[#5C3A21] mt-1">
+              {formatBRL(totalInvestidoPrevisto)}
+            </p>
+            <p className="text-xs text-[#7A6A5A] mt-0.5">Capital estimado + corretagem + IR</p>
+          </CardContent>
+        </Card>
         <Card className="bg-white border-[#EDE4D8]">
           <CardContent className="pt-4">
             <p className="text-xs text-[#7A6A5A] uppercase font-semibold">
@@ -413,6 +440,9 @@ export default function OportunidadeDetalhe() {
             </p>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="bg-white border-[#EDE4D8]">
           <CardContent className="pt-4">
             <p className="text-xs text-[#7A6A5A] uppercase font-semibold">
