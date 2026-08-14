@@ -93,7 +93,7 @@ export function calculateMetrics(inputs: CalculatorInputs) {
   }
 }
 
-const toNum = (v: unknown): number => {
+export const toNum = (v: unknown): number => {
   if (v == null) return 0
   const n = typeof v === 'string' ? parseFloat(v) : Number(v)
   return Number.isFinite(n) ? n : 0

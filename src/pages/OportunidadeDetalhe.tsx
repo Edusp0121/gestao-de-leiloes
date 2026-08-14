@@ -45,6 +45,7 @@ import {
 } from '@/lib/expense-categories'
 import { Filter, Users } from 'lucide-react'
 import { calculateInstallment, calculateSaldoDevedor, FinancingParams } from '@/lib/financing-utils'
+import { toNum } from '@/lib/calculator-utils'
 import { primeiraLetraNome, sociosCobertosPorMarca } from '@/lib/participantes-utils'
 import { Badge } from '@/components/ui/badge'
 
@@ -266,6 +267,25 @@ export default function OportunidadeDetalhe() {
   const calculatedInstallment = calculateInstallment(financingParams)
   const calculatedSaldoDevedor = calculateSaldoDevedor(financingParams)
 
+  // Retorno estimado DINÂMICO: enquanto não houver receita de venda lançada
+  // (lançamento do tipo "Receita" com descrição "Venda" ou "Locação"),
+  // calcula-se o retorno a partir do valor estimado de venda menos a comissão
+  // de corretagem, o total investido REAL (lançamentos de despesa) e o saldo
+  // devedor do financiamento. Uma vez existente receita de venda, usa-se o
+  // retorno_estimado salvo no banco.
+  const temReceitaVenda = lancamentos.some(
+    (l) => l.tipo === 'Receita' && isVendaReceita(l.descricao),
+  )
+  const valorVendaDyn = toNum(op.valor_venda_com_desconto) || toNum(op.valor_mercado)
+  const comissaoPctDyn =
+    op.comissao_corretor_percent != null ? toNum(op.comissao_corretor_percent) : 6
+  const comissaoVendaDyn = (comissaoPctDyn / 100) * valorVendaDyn
+  const retornoEstimadoExibido = temReceitaVenda
+    ? toNum(op.retorno_estimado) || toNum(op.maior_lucro_esperado)
+    : Math.round(
+        (valorVendaDyn - comissaoVendaDyn - totalInvestidoReal - calculatedSaldoDevedor) * 100,
+      ) / 100
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -378,9 +398,11 @@ export default function OportunidadeDetalhe() {
           <CardContent className="pt-4">
             <p className="text-xs text-[#7A6A5A] uppercase font-semibold">Retorno Estimado</p>
             <p className="text-xl font-bold text-[#16A34A] mt-1">
-              {formatBRL(op.retorno_estimado || op.maior_lucro_esperado)}
+              {formatBRL(retornoEstimadoExibido)}
             </p>
-            <p className="text-xs text-green-700 mt-0.5">Lucro esperado</p>
+            <p className="text-xs text-green-700 mt-0.5">
+              {temReceitaVenda ? 'Lucro realizado' : 'Cálculo dinâmico'}
+            </p>
           </CardContent>
         </Card>
         <Card className="bg-white border-[#EDE4D8]">
