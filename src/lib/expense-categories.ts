@@ -115,6 +115,12 @@ export function getEstimatedCostsByCategory(op?: any): Record<ExpenseCategory, n
         const v = num(planilha[cat])
         if (v > 0) result[cat] = Math.round(v * 100) / 100
       })
+      // A planilha antiga pode guardar em "Venda" um valor residual que era
+      // "Lucro Imobiliário" — sobrescrevemos sempre com o valor real de venda
+      // da oportunidade, que é o estimado correto da categoria Venda no
+      // gráfico comparativo de viabilidade.
+      const valorVenda = num(op.valor_venda_com_desconto) || num(op.valor_mercado)
+      result['Venda'] = Math.round(valorVenda * 100) / 100
       return result
     }
   }

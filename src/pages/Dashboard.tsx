@@ -66,6 +66,7 @@ import {
   calcTotalInvestido,
   calcCapitalNecessario,
   calcRetornoDinamico,
+  calcSaldoDevedorFinanciamento,
 } from '@/lib/calculator-utils'
 
 export default function Dashboard() {
@@ -158,7 +159,12 @@ export default function Dashboard() {
     const retorno = temReceitaVenda
       ? op.retorno_estimado || op.maior_lucro_esperado || 0
       : calcRetornoDinamico(op, despesasReaisOp > 0 ? despesasReaisOp : undefined)
-    const investido = despesasReaisOp > 0 ? despesasReaisOp : calcCapitalNecessario(op)
+    // Investido deve sempre considerar o saldo devedor do financiamento,
+    // além das despesas reais. Quando há despesas reais, somamos o saldo;
+    // quando não há, calcCapitalNecessario já o inclui.
+    const saldoDevedor = calcSaldoDevedorFinanciamento(op)
+    const investido =
+      despesasReaisOp > 0 ? despesasReaisOp + saldoDevedor : calcCapitalNecessario(op)
     return {
       name: op.nome.length > 15 ? op.nome.slice(0, 15) + '...' : op.nome,
       Investido: investido,

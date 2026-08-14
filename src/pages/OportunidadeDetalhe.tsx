@@ -48,6 +48,7 @@ import { calculateInstallment, calculateSaldoDevedor, FinancingParams } from '@/
 import { toNum, calcRetornoDinamico } from '@/lib/calculator-utils'
 import { primeiraLetraNome, sociosCobertosPorMarca } from '@/lib/participantes-utils'
 import { Badge } from '@/components/ui/badge'
+import pb from '@/lib/pocketbase/client'
 
 export default function OportunidadeDetalhe() {
   const { id } = useParams<{ id: string }>()
@@ -117,9 +118,49 @@ export default function OportunidadeDetalhe() {
             newCache.set(u.id, { id: u.id, name: u.name, email: u.email })
           }
         })
-        setUsuariosCache(newCache)
+        // Fallback: se a lista global não trouxe algum participante,
+        // buscamos individualmente por ID para garantir que o cache nunca
+        // fique vazio quando há participantes cadastrados.
+        const missing = Array.from(allUserIds).filter((uid) => !newCache.has(uid))
+        if (missing.length > 0) {
+          Promise.all(
+            missing.map((uid) =>
+              pb
+                .collection('users')
+                .getOne(uid, { fields: 'id,name,email' })
+                .catch(() => null),
+            ),
+          ).then((results) => {
+            results.forEach((u) => {
+              if (u?.id) {
+                newCache.set(u.id, { id: u.id, name: (u as any).name, email: (u as any).email })
+              }
+            })
+            setUsuariosCache(newCache)
+          })
+        } else {
+          setUsuariosCache(newCache)
+        }
       })
-      .catch(() => {})
+      .catch(async () => {
+        // Fallback: buscar cada usuário individualmente por ID.
+        const fallback = new Map<string, { id: string; name?: string; email?: string }>()
+        for (const uid of allUserIds) {
+          try {
+            const user = await pb.collection('users').getOne(uid, { fields: 'id,name,email' })
+            if (user) {
+              fallback.set(user.id, {
+                id: user.id,
+                name: (user as any).name,
+                email: (user as any).email,
+              })
+            }
+          } catch {
+            /* ignora usuários inexistentes */
+          }
+        }
+        setUsuariosCache(fallback)
+      })
   }, [op])
 
   // Sócios PARTICIPANTES da oportunidade (observadores nunca entram no
