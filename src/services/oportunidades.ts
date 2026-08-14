@@ -140,12 +140,12 @@ export function canManageLancamentos(op: Oportunidade): boolean {
 export const getOportunidades = () =>
   pb.collection('oportunidades').getFullList<Oportunidade>({
     sort: '-created',
-    expand: 'participantes,observadores',
+    expand: 'usuario,participantes,observadores',
   })
 
 export const getOportunidade = (id: string) =>
   pb.collection('oportunidades').getOne<Oportunidade>(id, {
-    expand: 'participantes,observadores',
+    expand: 'usuario,participantes,observadores',
   })
 
 /**

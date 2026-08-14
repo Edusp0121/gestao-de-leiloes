@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select'
 import { Plus, Pencil } from 'lucide-react'
 import { createLancamento, updateLancamento, Lancamento } from '@/services/lancamentos'
-import { getOportunidade, toIdArray, type UserRef } from '@/services/oportunidades'
+import { getOportunidade, getUsuarios, toIdArray, type UserRef } from '@/services/oportunidades'
 import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
 import { CATEGORY_DESCRIPTIONS } from '@/lib/expense-categories'
@@ -88,14 +88,63 @@ export function LancamentoFormModal({
     }
     setLoadingParticipantes(true)
     getOportunidade(oportunidadeId)
-      .then((op) => {
-        // Apenas PARTICIPANTES entram em "Quem Pagou" (observadores nunca).
-        const expanded = op.expand?.participantes
-        const parts: UserRef[] =
-          Array.isArray(expanded) && expanded.length > 0
-            ? expanded.map((p) => ({ id: p.id, name: p.name, email: p.email }))
-            : toIdArray(op.participantes).map((id) => ({ id }))
-        setParticipantes(parts)
+      .then(async (op) => {
+        // Coleta participantes e usuario expandidos da oportunidade
+        const expandedParts = Array.isArray(op.expand?.participantes)
+          ? op.expand!.participantes
+          : []
+        const expandedUser = op.expand?.usuario
+
+        // Mapa de id -> UserRef
+        const knownUsers = new Map<string, UserRef>()
+        if (expandedUser?.id) {
+          knownUsers.set(expandedUser.id, {
+            id: expandedUser.id,
+            name: expandedUser.name,
+            email: expandedUser.email,
+          })
+        }
+        expandedParts.forEach((p) => {
+          if (p?.id) {
+            knownUsers.set(p.id, { id: p.id, name: p.name, email: p.email })
+          }
+        })
+
+        // Conjunto de todos os IDs de participantes e criador
+        const partIds = toIdArray(op.participantes)
+        const allUserIds = new Set<string>()
+        if (op.usuario) allUserIds.add(op.usuario)
+        partIds.forEach((id) => allUserIds.add(id))
+
+        // Verifica se faltam detalhes (como nome/email) de algum usuário
+        const missingDetails = Array.from(allUserIds).some((id) => {
+          const user = knownUsers.get(id)
+          return !user || (!user.name && !user.email)
+        })
+
+        if (missingDetails) {
+          try {
+            const allUsers = await getUsuarios()
+            allUsers.forEach((u) => {
+              if (u.id) {
+                const existing = knownUsers.get(u.id)
+                knownUsers.set(u.id, {
+                  id: u.id,
+                  name: u.name || existing?.name,
+                  email: u.email || existing?.email,
+                })
+              }
+            })
+          } catch {
+            // Se falhar ao buscar a lista de todos os usuários, prossegue com os que tem
+          }
+        }
+
+        const result: UserRef[] = Array.from(allUserIds).map((id) => {
+          return knownUsers.get(id) || { id }
+        })
+
+        setParticipantes(result)
       })
       .catch(() => setParticipantes([]))
       .finally(() => setLoadingParticipantes(false))

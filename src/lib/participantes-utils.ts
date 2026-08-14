@@ -23,15 +23,31 @@ export function buildQuemPagouOptions(
   participantes: UserRef[] | undefined | null,
 ): QuemPagouOption[] {
   const socios = (participantes || []).filter((p) => p && p.id)
-  const options: QuemPagouOption[] = socios.map((p) => {
-    const letra = primeiraLetraNome(p.name || p.email || '?')
-    return { value: letra, label: `${letra} — ${p.name || p.email || 'Sócio'}` }
+
+  const uniqueMap = new Map<string, UserRef>()
+  socios.forEach((p) => uniqueMap.set(p.id, p))
+  const uniqueSocios = Array.from(uniqueMap.values())
+
+  const options: QuemPagouOption[] = []
+  const seenValues = new Set<string>()
+
+  uniqueSocios.forEach((p) => {
+    const nome = (p.name || '').trim() || (p.email || '').split('@')[0] || 'Sócio'
+    const letra = primeiraLetraNome(nome)
+    if (letra && letra !== '?' && !seenValues.has(letra)) {
+      seenValues.add(letra)
+      options.push({ value: letra, label: `${letra} — ${nome}` })
+    }
   })
 
-  if (socios.length === 2) {
-    options.push({ value: 'A', label: 'A — Ambos' })
-  } else if (socios.length > 2) {
-    options.push({ value: 'T', label: 'T — Todos' })
+  if (uniqueSocios.length === 2) {
+    if (!seenValues.has('A')) {
+      options.push({ value: 'A', label: 'A — Ambos' })
+    }
+  } else if (uniqueSocios.length > 2) {
+    if (!seenValues.has('T')) {
+      options.push({ value: 'T', label: 'T — Todos' })
+    }
   }
 
   return options
@@ -46,12 +62,20 @@ export function buildQuemPagouOptions(
  * - 3+ participantes: "T" (Todos).
  */
 export function defaultQuemPagou(participantes: UserRef[] | undefined | null): string {
-  const socios = (participantes || []).filter(Boolean)
-  const count = socios.length
+  const socios = (participantes || []).filter((p) => p && p.id)
+
+  const uniqueMap = new Map<string, UserRef>()
+  socios.forEach((p) => uniqueMap.set(p.id, p))
+  const uniqueSocios = Array.from(uniqueMap.values())
+
+  const count = uniqueSocios.length
   if (count > 2) return 'T'
   if (count === 2) return 'A'
   if (count === 1) {
-    return primeiraLetraNome(socios[0].name || socios[0].email || '?')
+    const p = uniqueSocios[0]
+    const nome = (p.name || '').trim() || (p.email || '').split('@')[0] || ''
+    const letra = primeiraLetraNome(nome)
+    return letra !== '?' ? letra : ''
   }
   return ''
 }
@@ -59,7 +83,7 @@ export function defaultQuemPagou(participantes: UserRef[] | undefined | null): s
 /** Primeira letra (maiúscula) do primeiro nome. */
 export function primeiraLetraNome(nome: string): string {
   const trimmed = (nome || '').trim()
-  if (!trimmed) return '?'
+  if (!trimmed || trimmed === '?') return '?'
   return trimmed.charAt(0).toUpperCase()
 }
 
@@ -74,7 +98,7 @@ export function sociosCobertosPorMarca(
   marca: string | undefined | null,
   totalSocios: number,
 ): number {
-  if (!marca) return 0
+  if (!marca || marca === '?') return 0
   if (marca === 'A') return 2
   if (marca === 'T') return totalSocios
   return 1

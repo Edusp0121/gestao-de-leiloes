@@ -94,16 +94,31 @@ export default function OportunidadeDetalhe() {
   }, [lancamentos, categoryFilter])
 
   // Sócios PARTICIPANTES da oportunidade (observadores nunca entram no
-  // rateio nem na lista de sócios). Sempre trata como array.
+  // rateio nem na lista de sócios). Inclui o criador e participantes.
   const participantesAtuais: { id: string; name?: string; email?: string }[] = useMemo(() => {
     if (!op) return []
-    const expanded = op.expand?.participantes
-    if (Array.isArray(expanded) && expanded.length > 0) {
-      return expanded.map((p) => ({ id: p.id, name: p.name, email: p.email }))
+    const knownUsers = new Map<string, { id: string; name?: string; email?: string }>()
+
+    if (op.expand?.usuario?.id) {
+      knownUsers.set(op.expand.usuario.id, {
+        id: op.expand.usuario.id,
+        name: op.expand.usuario.name,
+        email: op.expand.usuario.email,
+      })
     }
-    const ids = toIdArray(op.participantes)
-    if (ids.length > 0) return ids.map((pid) => ({ id: pid }))
-    return op.usuario ? [{ id: op.usuario }] : []
+    if (Array.isArray(op.expand?.participantes)) {
+      op.expand!.participantes.forEach((p) => {
+        if (p?.id) {
+          knownUsers.set(p.id, { id: p.id, name: p.name, email: p.email })
+        }
+      })
+    }
+
+    const allUserIds = new Set<string>()
+    if (op.usuario) allUserIds.add(op.usuario)
+    toIdArray(op.participantes).forEach((id) => allUserIds.add(id))
+
+    return Array.from(allUserIds).map((id) => knownUsers.get(id) || { id })
   }, [op])
 
   // Observadores da oportunidade (apenas para exibição).
