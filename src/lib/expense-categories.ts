@@ -201,7 +201,7 @@ export function getEstimatedCostsByCategory(op?: any): Record<ExpenseCategory, n
         method: modalidade === 'SAC' ? 'SAC' : 'PRICE',
         entryPercent,
       })
-      prestacoesPagas = valorParcelaCalc * parcelasPagas
+      prestacoesPagas = valorParcelaCalc * prazo
     }
   }
   const mensais = prestacoesPagas + condominioIptuMensal * prazo
