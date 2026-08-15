@@ -331,6 +331,17 @@ export default function OportunidadeDetalhe() {
     return Math.round(capital * 100) / 100
   })()
 
+  // ROI dinâmico: calculado a partir do retorno estimado e do valor investido
+  // (Real se houver lançamentos, senão Previsto). Atualiza automaticamente à
+  // medida que lançamentos são adicionados — diferente dos campos estáticos
+  // `roi_esperado_periodo` / `roi_esperado_anualizado` salvos na análise.
+  const valorInvestidoRoi = totalInvestidoReal > 0 ? totalInvestidoReal : totalInvestidoPrevisto
+  const tempoVendaMeses = toNum(op.tempo_estimado_venda_meses)
+  const roiPeriodo =
+    valorInvestidoRoi > 0 ? (retornoEstimadoExibido / valorInvestidoRoi) * 100 : null
+  const roiAnualizado =
+    roiPeriodo !== null && tempoVendaMeses > 0 ? roiPeriodo / (tempoVendaMeses / 12) : null
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -468,10 +479,10 @@ export default function OportunidadeDetalhe() {
           <CardContent className="pt-4">
             <p className="text-xs text-[#7A6A5A] uppercase font-semibold">ROI no Período / Anual</p>
             <p className="text-xl font-bold text-[#F97316] mt-1">
-              {formatPercent(op.roi_esperado_periodo)}
+              {roiPeriodo !== null ? formatPercent(roiPeriodo) : '—'}
             </p>
             <p className="text-xs text-[#8B5A2B] mt-0.5">
-              Anualizado: {formatPercent(op.roi_esperado_anualizado)}
+              Anualizado: {roiAnualizado !== null ? formatPercent(roiAnualizado) : '—'}
             </p>
           </CardContent>
         </Card>
