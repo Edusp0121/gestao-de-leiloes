@@ -290,7 +290,12 @@ export default function OportunidadeDetalhe() {
 
   const estimatedCosts = getEstimatedCostsByCategory(op)
   const realCosts = getRealCostsByCategory(lancamentos)
-  const compChartData = EXPENSE_CATEGORIES.map((cat) => ({
+  // A categoria "Venda" (ex.: valor de venda/locação) é uma receita cujo valor
+  // é muito maior que as despesas das demais categorias e "rouba" a visualização
+  // do gráfico comparativo. Por isso ela é excluída apenas do gráfico — os
+  // cálculos, cards e demais fluxos continuam usando `estimatedCosts`/`realCosts`
+  // completos (incluindo "Venda").
+  const compChartData = EXPENSE_CATEGORIES.filter((cat) => cat !== 'Venda').map((cat) => ({
     name: cat,
     Estimado: Math.round((estimatedCosts[cat] ?? 0) * 100) / 100,
     Real: Math.round((realCosts[cat] ?? 0) * 100) / 100,
