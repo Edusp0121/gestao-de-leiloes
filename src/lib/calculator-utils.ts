@@ -240,10 +240,7 @@ export function calcRetornoDinamico(
       ? toNum(op.comissao_corretor_percent)
       : 6
   const comissaoVenda = (comissaoPercent / 100) * valorVenda
-  const despesas =
-    typeof despesasReais === 'number' && despesasReais >= 0
-      ? despesasReais
-      : calcTotalDespesasEstimadas(op)
+  const despesas = Math.max(despesasReais || 0, calcTotalDespesasEstimadas(op))
   const saldoDevedor = calcSaldoDevedorFinanciamento(op)
 
   const retorno = valorVenda - comissaoVenda - despesas - saldoDevedor
