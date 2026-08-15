@@ -24,6 +24,7 @@ export interface CalculatorInputs {
   foro?: number
   taxa_servico?: number
   emolumentos?: number
+  valor_prefeitura_venal?: number
 }
 
 export function calculateMetrics(inputs: CalculatorInputs) {
@@ -50,7 +51,11 @@ export function calculateMetrics(inputs: CalculatorInputs) {
 
   const valorVendaComDesconto = valorMercado * (1 - desagio / 100)
   const comissaoLeiloeiro = valorArrematacao * (comissaoLeiloeiroPct / 100)
-  const itbi = valorArrematacao * (itbiPct / 100)
+  const valorBaseITBI =
+    (Number(inputs.valor_prefeitura_venal) || 0) > 0
+      ? Number(inputs.valor_prefeitura_venal)
+      : valorArrematacao
+  const itbi = valorBaseITBI * (itbiPct / 100)
   const comissaoCorretor = valorVendaComDesconto * (comissaoCorretorPct / 100)
   const custosCartorio = escritura + registro + averbacao
   const custosManutencao = condominioIptu * tempoMeses

@@ -163,7 +163,9 @@ export function getEstimatedCostsByCategory(op?: any): Record<ExpenseCategory, n
   const aquisicao = sinal + leiloeiro
 
   // Tributos
-  const itbi = (itbiPercent / 100) * valorArrematacao
+  const valorPrefeitura = num(op.valor_prefeitura_venal)
+  const valorBaseITBI = valorPrefeitura > 0 ? valorPrefeitura : valorArrematacao
+  const itbi = (itbiPercent / 100) * valorBaseITBI
   const tributos = itbi + escritura + registro + averbacao
 
   // Desocupação

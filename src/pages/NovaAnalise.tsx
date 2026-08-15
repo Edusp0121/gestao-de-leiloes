@@ -65,6 +65,7 @@ const DEFAULT_FORM = {
   incluir_ir_despesas: true,
   prazo_financiamento: 120,
   percentual_entrada: 10,
+  valor_prefeitura_venal: 0,
   taxa_avaliacao: 0,
   taxas_judiciais: 0,
   acordo_desocupacao: 0,
@@ -181,6 +182,7 @@ export default function NovaAnalise() {
       acordo_desocupacao: Number(form.acordo_desocupacao),
       baixa_gravames: Number(form.baixa_gravames),
       foro: Number(form.foro),
+      valor_prefeitura_venal: Number(form.valor_prefeitura_venal),
     }),
     valor_parcela_mensal: 0,
     saldo_devedor: 0,
@@ -478,14 +480,14 @@ export default function NovaAnalise() {
             {numericFieldError('prazo_financiamento')}
           </div>
           <div className="space-y-2">
-            <Label>Percentual de entrada (%)</Label>
+            <Label>Valor Prefeitura (Venal) (R$)</Label>
             <Input
               type="number"
-              step="0.1"
-              value={form.percentual_entrada}
-              onChange={(e) => handleChange('percentual_entrada', e.target.value)}
+              step="0.01"
+              value={form.valor_prefeitura_venal}
+              onChange={(e) => handleChange('valor_prefeitura_venal', e.target.value)}
             />
-            {numericFieldError('percentual_entrada')}
+            {numericFieldError('valor_prefeitura_venal')}
           </div>
         </CardContent>
       </Card>
