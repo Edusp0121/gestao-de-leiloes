@@ -1,3 +1,5 @@
+import { calculateInstallment } from './financing-utils'
+
 export type ExpenseCategory = 'Aquisição' | 'Tributos' | 'Desocupação' | 'Mensais' | 'Venda'
 
 export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
@@ -172,7 +174,36 @@ export function getEstimatedCostsByCategory(op?: any): Record<ExpenseCategory, n
   const desocupacao = acordoDesocupacao + reformaPrevista + assessoriaJuridica + taxasJudiciais
 
   // Mensais
-  const prestacoesPagas = valorParcelaMensal * parcelasPagas
+  // Valor das prestações pagas do financiamento. Quando `valor_parcela_mensal`
+  // está populado (> 0), usamos diretamente (comportamento original). Quando o
+  // campo nunca foi populado (ex.: oportunidade Cachoeirinha, onde
+  // valor_parcela_mensal = 0 mas parcelas_pagas = 3 e prazo_financiamento =
+  // 120), recalculamos o valor da parcela a partir dos parâmetros do
+  // financiamento (PRICE/SAC) e multiplicamos pelas parcelas pagas — senão as
+  // prestações do financiamento não entrariam no previsto da categoria Mensais.
+  let prestacoesPagas = valorParcelaMensal * parcelasPagas
+  if (valorParcelaMensal <= 0 && parcelasPagas > 0) {
+    const prazoFinanciamento = num(op.prazo_financiamento)
+    const modalidade = op.modalidade_financiamento
+    if (prazoFinanciamento > 0 && modalidade && modalidade !== 'À Vista') {
+      const annualRate = num(op.taxa_juros_financiamento) || 8
+      // Mesmo padrão de calcSaldoDevedorFinanciamento/calculateInstallment:
+      // percentual_entrada ausente ou 0 ⇒ 10% como padrão.
+      const entryPercent =
+        op.percentual_entrada == null || num(op.percentual_entrada) === 0
+          ? 10
+          : num(op.percentual_entrada)
+      const valorParcelaCalc = calculateInstallment({
+        principal: valorArrematacao,
+        annualRate,
+        termMonths: prazoFinanciamento,
+        paymentsMade: parcelasPagas,
+        method: modalidade === 'SAC' ? 'SAC' : 'PRICE',
+        entryPercent,
+      })
+      prestacoesPagas = valorParcelaCalc * parcelasPagas
+    }
+  }
   const mensais = prestacoesPagas + condominioIptuMensal * prazo
 
   // Venda (categoria do gráfico comparativo):
