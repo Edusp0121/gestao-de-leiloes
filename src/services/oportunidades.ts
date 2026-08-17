@@ -209,15 +209,18 @@ export const getRelatorioUrl = (record: Oportunidade) => {
  */
 export const getUsuarios = async (): Promise<UserRef[]> => {
   try {
-    const list = await pb.collection('users').getFullList<UserRef>({
-      fields: 'id,name,email',
+    const list = await pb.collection('users').getFullList<UserRef & { admin?: boolean }>({
+      fields: 'id,name,email,admin',
       sort: 'name',
     })
-    return list
+    // O Administrador ("Doulhe3") NUNCA deve participar dos rateios ou aparecer como opção
+    // de pagador/sócio/participante no sistema.
+    return list.filter((u) => u.admin !== true && u.name !== 'Doulhe3')
   } catch {
     const me = pb.authStore.record
-    return me
-      ? [{ id: me.id, name: ((me as any)?.name as string) || '', email: (me as any)?.email }]
-      : []
+    if (me && (me as any)?.admin !== true && (me as any)?.name !== 'Doulhe3') {
+      return [{ id: me.id, name: ((me as any)?.name as string) || '', email: (me as any)?.email }]
+    }
+    return []
   }
 }

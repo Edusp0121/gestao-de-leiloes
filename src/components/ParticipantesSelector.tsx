@@ -41,10 +41,11 @@ export function ParticipantesSelector({
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  // Sempre busca/valida pelo EMAIL (chave única).
+  // Sempre busca/valida pelo EMAIL (chave única). Filtra Administrador ("Doulhe3").
   const normalize = (s: string) => s.trim().toLowerCase()
   const filtered = usuarios.filter((u) => {
     if (!u || !u.id) return false
+    if ((u as any).admin === true || u.name === 'Doulhe3') return false
     const email = normalize(u.email || '')
     const name = normalize(u.name || '')
     const q = normalize(query)

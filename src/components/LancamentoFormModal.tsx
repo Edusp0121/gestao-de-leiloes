@@ -80,7 +80,7 @@ export function LancamentoFormModal({
   }, [participantes, quemPagou])
 
   // Carrega os sócios da oportunidade selecionada para montar as opções de
-  // "Quem Pagou".
+  // "Quem Pagou". Administrador ("Doulhe3") é filtrado.
   useEffect(() => {
     if (!open || !oportunidadeId) {
       setParticipantes([])
@@ -96,17 +96,23 @@ export function LancamentoFormModal({
         const expandedUser = op.expand?.usuario
 
         // Mapa de id -> UserRef
-        const knownUsers = new Map<string, UserRef>()
+        const knownUsers = new Map<string, UserRef & { admin?: boolean }>()
         if (expandedUser?.id) {
           knownUsers.set(expandedUser.id, {
             id: expandedUser.id,
             name: expandedUser.name,
             email: expandedUser.email,
+            admin: (expandedUser as any).admin,
           })
         }
         expandedParts.forEach((p) => {
           if (p?.id) {
-            knownUsers.set(p.id, { id: p.id, name: p.name, email: p.email })
+            knownUsers.set(p.id, {
+              id: p.id,
+              name: p.name,
+              email: p.email,
+              admin: (p as any).admin,
+            })
           }
         })
 
@@ -140,9 +146,11 @@ export function LancamentoFormModal({
           }
         }
 
-        const result: UserRef[] = Array.from(allUserIds).map((id) => {
-          return knownUsers.get(id) || { id }
-        })
+        const result: UserRef[] = Array.from(allUserIds)
+          .map((id) => {
+            return knownUsers.get(id) || { id }
+          })
+          .filter((u) => (u as any).admin !== true && u.name !== 'Doulhe3')
 
         setParticipantes(result)
       })

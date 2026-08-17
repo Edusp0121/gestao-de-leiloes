@@ -97,7 +97,7 @@ export default function OportunidadeDetalhe() {
   }, [lancamentos, categoryFilter])
 
   const [usuariosCache, setUsuariosCache] = useState<
-    Map<string, { id: string; name?: string; email?: string }>
+    Map<string, { id: string; name?: string; email?: string; admin?: boolean }>
   >(new Map())
 
   // Busca lista global de usuários se faltar nome/email nos expand do PocketBase
@@ -112,28 +112,33 @@ export default function OportunidadeDetalhe() {
 
     getUsuarios()
       .then((usersList) => {
-        const newCache = new Map<string, { id: string; name?: string; email?: string }>()
+        const newCache = new Map<
+          string,
+          { id: string; name?: string; email?: string; admin?: boolean }
+        >()
         usersList.forEach((u) => {
           if (u.id) {
-            newCache.set(u.id, { id: u.id, name: u.name, email: u.email })
+            newCache.set(u.id, { id: u.id, name: u.name, email: u.email, admin: (u as any).admin })
           }
         })
-        // Fallback: se a lista global não trouxe algum participante,
-        // buscamos individualmente por ID para garantir que o cache nunca
-        // fique vazio quando há participantes cadastrados.
         const missing = Array.from(allUserIds).filter((uid) => !newCache.has(uid))
         if (missing.length > 0) {
           Promise.all(
             missing.map((uid) =>
               pb
                 .collection('users')
-                .getOne(uid, { fields: 'id,name,email' })
+                .getOne(uid, { fields: 'id,name,email,admin' })
                 .catch(() => null),
             ),
           ).then((results) => {
             results.forEach((u) => {
               if (u?.id) {
-                newCache.set(u.id, { id: u.id, name: (u as any).name, email: (u as any).email })
+                newCache.set(u.id, {
+                  id: u.id,
+                  name: (u as any).name,
+                  email: (u as any).email,
+                  admin: (u as any).admin,
+                })
               }
             })
             setUsuariosCache(newCache)
@@ -143,16 +148,19 @@ export default function OportunidadeDetalhe() {
         }
       })
       .catch(async () => {
-        // Fallback: buscar cada usuário individualmente por ID.
-        const fallback = new Map<string, { id: string; name?: string; email?: string }>()
+        const fallback = new Map<
+          string,
+          { id: string; name?: string; email?: string; admin?: boolean }
+        >()
         for (const uid of allUserIds) {
           try {
-            const user = await pb.collection('users').getOne(uid, { fields: 'id,name,email' })
+            const user = await pb.collection('users').getOne(uid, { fields: 'id,name,email,admin' })
             if (user) {
               fallback.set(user.id, {
                 id: user.id,
                 name: (user as any).name,
                 email: (user as any).email,
+                admin: (user as any).admin,
               })
             }
           } catch {
@@ -164,38 +172,51 @@ export default function OportunidadeDetalhe() {
   }, [op])
 
   // Sócios PARTICIPANTES da oportunidade (observadores nunca entram no
-  // rateio nem na lista de sócios). Inclui o criador e participantes.
-  const participantesAtuais: { id: string; name?: string; email?: string }[] = useMemo(() => {
-    if (!op) return []
-    const knownUsers = new Map<string, { id: string; name?: string; email?: string }>()
+  // rateio nem na lista de sócios). O Administrador ("Doulhe3") nunca participa do rateio.
+  const participantesAtuais: { id: string; name?: string; email?: string; admin?: boolean }[] =
+    useMemo(() => {
+      if (!op) return []
+      const knownUsers = new Map<
+        string,
+        { id: string; name?: string; email?: string; admin?: boolean }
+      >()
 
-    if (op.expand?.usuario?.id) {
-      knownUsers.set(op.expand.usuario.id, {
-        id: op.expand.usuario.id,
-        name: op.expand.usuario.name,
-        email: op.expand.usuario.email,
-      })
-    }
-    if (Array.isArray(op.expand?.participantes)) {
-      op.expand!.participantes.forEach((p) => {
-        if (p?.id) {
-          knownUsers.set(p.id, { id: p.id, name: p.name, email: p.email })
-        }
-      })
-    }
+      if (op.expand?.usuario?.id) {
+        knownUsers.set(op.expand.usuario.id, {
+          id: op.expand.usuario.id,
+          name: op.expand.usuario.name,
+          email: op.expand.usuario.email,
+          admin: (op.expand.usuario as any).admin,
+        })
+      }
+      if (Array.isArray(op.expand?.participantes)) {
+        op.expand!.participantes.forEach((p) => {
+          if (p?.id) {
+            knownUsers.set(p.id, {
+              id: p.id,
+              name: p.name,
+              email: p.email,
+              admin: (p as any).admin,
+            })
+          }
+        })
+      }
 
-    const allUserIds = new Set<string>()
-    if (op.usuario) allUserIds.add(op.usuario)
-    toIdArray(op.participantes).forEach((id) => allUserIds.add(id))
+      const allUserIds = new Set<string>()
+      if (op.usuario) allUserIds.add(op.usuario)
+      toIdArray(op.participantes).forEach((id) => allUserIds.add(id))
 
-    return Array.from(allUserIds).map((id) => {
-      const fromExpand = knownUsers.get(id)
-      const fromCache = usuariosCache.get(id)
-      const name = fromExpand?.name || fromCache?.name
-      const email = fromExpand?.email || fromCache?.email
-      return { id, name, email }
-    })
-  }, [op, usuariosCache])
+      return Array.from(allUserIds)
+        .map((id) => {
+          const fromExpand = knownUsers.get(id)
+          const fromCache = usuariosCache.get(id)
+          const name = fromExpand?.name || fromCache?.name
+          const email = fromExpand?.email || fromCache?.email
+          const isAdmin = fromExpand?.admin || fromCache?.admin
+          return { id, name, email, admin: isAdmin }
+        })
+        .filter((u) => !u.admin && u.name !== 'Doulhe3')
+    }, [op, usuariosCache])
 
   // Observadores da oportunidade (apenas para exibição).
   const observadoresAtuais: { id: string; name?: string; email?: string }[] = useMemo(() => {
@@ -413,7 +434,7 @@ export default function OportunidadeDetalhe() {
             </a>
           )}
           {podeEditar && (
-            <Link to={`/editar-analise/${op.id}`}>
+            <Link to={`/nova-analise/${op.id}`}>
               <Button
                 variant="outline"
                 className="border-[#EDE4D8] text-[#5C3A21] hover:bg-[#FFF4E8]"
