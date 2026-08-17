@@ -354,6 +354,11 @@ export default function OportunidadeDetalhe() {
           </Link>
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold text-[#5C3A21]">{op.nome}</h1>
+            {op.uf && (
+              <Badge variant="outline" className="text-[#5C3A21] border-[#EDE4D8] font-bold">
+                {op.uf}
+              </Badge>
+            )}
             <StatusBadge status={op.status} />
             {isBestRoi && (
               <span className="bg-[#F97316] text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
@@ -406,6 +411,16 @@ export default function OportunidadeDetalhe() {
                 <Download className="w-4 h-4" /> Baixar Relatório
               </Button>
             </a>
+          )}
+          {podeEditar && (
+            <Link to={`/editar-analise/${op.id}`}>
+              <Button
+                variant="outline"
+                className="border-[#EDE4D8] text-[#5C3A21] hover:bg-[#FFF4E8]"
+              >
+                Editar Oportunidade
+              </Button>
+            </Link>
           )}
           {podeGerenciarLancamentos && (
             <LancamentoFormModal

@@ -30,12 +30,44 @@ import { FileUp, Calculator, Users } from 'lucide-react'
 import { calculateInstallment, calculateSaldoDevedor, FinancingParams } from '@/lib/financing-utils'
 import { ParticipantesSelector } from '@/components/ParticipantesSelector'
 import pb from '@/lib/pocketbase/client'
+import { calculateEscritura, calculateRegistroEAverbacao } from '@/lib/cartorio-utils'
 
 const AGENTES = ['Caixa', 'Bradesco', 'Itaú', 'Santander', 'Emgea', 'Direto', 'Outros']
+
+const UFS = [
+  'AC',
+  'AL',
+  'AP',
+  'AM',
+  'BA',
+  'CE',
+  'DF',
+  'ES',
+  'GO',
+  'MA',
+  'MT',
+  'MS',
+  'MG',
+  'PA',
+  'PB',
+  'PR',
+  'PE',
+  'PI',
+  'RJ',
+  'RN',
+  'RS',
+  'RO',
+  'RR',
+  'SC',
+  'SP',
+  'SE',
+  'TO',
+]
 
 const DEFAULT_FORM = {
   nome: '',
   endereco: '',
+  uf: '',
   tipo_leilao: 'Judicial' as 'Judicial' | 'Extrajudicial',
   banco_selecionado: 'Caixa',
   data_aquisicao: new Date().toISOString().split('T')[0],
@@ -156,7 +188,40 @@ export default function NovaAnalise() {
   }, [id, currentUserId])
 
   const handleChange = (field: string, value: any) => {
-    setForm((prev) => ({ ...prev, [field]: value }))
+    setForm((prev) => {
+      const next = { ...prev, [field]: value }
+
+      // Lógica de preenchimento automático para Escritura, Registro e Averbação:
+      // Executa se UF, valor_arrematacao ou valor_prefeitura_venal forem alterados.
+      // Regra: "Os campos automáticos devem ser preenchidos apenas se o valor atual for 0 ou se a UF for alterada."
+      if (field === 'uf' || field === 'valor_arrematacao' || field === 'valor_prefeitura_venal') {
+        const ufChanged = field === 'uf' && value !== prev.uf
+        const newUf = field === 'uf' ? value : prev.uf
+        const newArrematacao =
+          Number(field === 'valor_arrematacao' ? value : prev.valor_arrematacao) || 0
+        const newVenal =
+          Number(field === 'valor_prefeitura_venal' ? value : prev.valor_prefeitura_venal) || 0
+
+        const calcEscritura = calculateEscritura(newArrematacao, newVenal)
+        const { registro: calcRegistro, averbacao: calcAverbacao } = calculateRegistroEAverbacao(
+          newUf,
+          newArrematacao,
+          newVenal,
+        )
+
+        if (ufChanged || Number(prev.escritura) === 0) {
+          next.escritura = calcEscritura
+        }
+        if (ufChanged || Number(prev.registro) === 0) {
+          next.registro = calcRegistro
+        }
+        if (ufChanged || Number(prev.averbacao) === 0) {
+          next.averbacao = calcAverbacao
+        }
+      }
+
+      return next
+    })
     setFieldErrors((prev) => ({ ...prev, [field]: '' }))
   }
 
@@ -315,10 +380,25 @@ export default function NovaAnalise() {
             <Label>Endereço Completo *</Label>
             <Input
               required
-              placeholder="Rua, Número, Bairro - Cidade/UF"
+              placeholder="Rua, Número, Bairro - Cidade"
               value={form.endereco}
               onChange={(e) => handleChange('endereco', e.target.value)}
             />
+          </div>
+          <div className="space-y-2">
+            <Label>UF (Estado)</Label>
+            <Select value={form.uf} onValueChange={(v) => handleChange('uf', v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o Estado (UF)" />
+              </SelectTrigger>
+              <SelectContent>
+                {UFS.map((uf) => (
+                  <SelectItem key={uf} value={uf}>
+                    {uf}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label>Tipo de Leilão</Label>

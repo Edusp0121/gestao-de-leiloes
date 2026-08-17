@@ -11,6 +11,7 @@ export interface Oportunidade {
   nome: string
   endereco: string
   usuario: string
+  uf?: string
   participantes?: string[] | null
   observadores?: string[] | null
   tipo_leilao?: 'Judicial' | 'Extrajudicial'

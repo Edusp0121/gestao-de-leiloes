@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-15T16:35:32.104Z",
+  "generatedAt": "2026-08-17T18:43:40.357Z",
   "collections": [
     {
       "name": "users",
@@ -384,6 +384,12 @@
         {
           "name": "valor_prefeitura_venal",
           "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "uf",
+          "type": "text",
           "required": false,
           "system": false
         }

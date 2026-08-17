@@ -25,6 +25,7 @@ export interface CalculatorInputs {
   taxa_servico?: number
   emolumentos?: number
   valor_prefeitura_venal?: number
+  uf?: string
 }
 
 export function calculateMetrics(inputs: CalculatorInputs) {
@@ -54,7 +55,7 @@ export function calculateMetrics(inputs: CalculatorInputs) {
   const valorBaseITBI =
     (Number(inputs.valor_prefeitura_venal) || 0) > 0
       ? Number(inputs.valor_prefeitura_venal)
-      : valorArrematacao
+      : valorMercado
   const itbi = valorBaseITBI * (itbiPct / 100)
   const comissaoCorretor = valorVendaComDesconto * (comissaoCorretorPct / 100)
   const custosCartorio = escritura + registro + averbacao
