@@ -167,7 +167,10 @@ export const createOportunidade = (data: Partial<Oportunidade> | FormData) => {
     if (userId && !data.has('usuario')) data.append('usuario', userId)
     return pb.collection('oportunidades').create<Oportunidade>(data)
   }
-  const payload: Partial<Oportunidade> = { ...data, usuario: userId }
+  const payload: Partial<Oportunidade> = { ...data }
+  if (!payload.usuario && userId) {
+    payload.usuario = userId
+  }
   if (!isAdmin) {
     delete payload.observadores
   }

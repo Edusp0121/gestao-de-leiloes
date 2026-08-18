@@ -279,30 +279,57 @@ export default function NovaAnalise() {
     setLoading(true)
     setFieldErrors({})
     try {
-      const formData = new FormData()
-      Object.entries(form).forEach(([key, val]) => {
-        formData.append(key, String(val))
-      })
-      Object.entries(computed).forEach(([key, val]) => {
-        formData.append(key, String(val))
-      })
-      // Participantes e Observadores (enviados se houver valores).
-      participantes.forEach((pid) => formData.append('participantes', pid))
-      if (isAdmin) {
-        observadores.forEach((oid) => formData.append('observadores', oid))
-      }
+      // Se houver arquivo anexo (relatorioFile), precisamos usar FormData.
+      // Se usarmos FormData, para enviar arrays para o PocketBase JS SDK sem correr
+      // o risco de sobrescrever chaves repetidas (Causa Raiz #1), enviamos o FormData
+      // com cada participante appendado e garantimos que o SDK envie no formato correto,
+      // OU enviamos objeto plano se não houver arquivo.
       if (relatorioFile) {
+        const formData = new FormData()
+        Object.entries(form).forEach(([key, val]) => {
+          formData.append(key, String(val))
+        })
+        Object.entries(computed).forEach(([key, val]) => {
+          formData.append(key, String(val))
+        })
+        // No PocketBase JS SDK, para enviar array em FormData com arquivos,
+        // repetidos appends de 'participantes' e 'observadores' funcionam se enviados no FormData.
+        // Contudo, se o array for vazio ou se o SDK esperar entradas indexadas/repetidas:
+        participantes.forEach((pid) => formData.append('participantes', pid))
+        if (isAdmin) {
+          observadores.forEach((oid) => formData.append('observadores', oid))
+        }
         formData.append('relatorio_viabilidade', relatorioFile)
-      }
 
-      if (isEdit && id) {
-        await updateOportunidade(id, formData)
-        toast({ title: 'Sucesso', description: 'Oportunidade atualizada com sucesso!' })
-        navigate(`/oportunidade/${id}`)
+        if (isEdit && id) {
+          await updateOportunidade(id, formData)
+          toast({ title: 'Sucesso', description: 'Oportunidade atualizada com sucesso!' })
+          navigate(`/oportunidade/${id}`)
+        } else {
+          const created = await createOportunidade(formData)
+          toast({ title: 'Sucesso', description: 'Oportunidade cadastrada com sucesso!' })
+          navigate(`/oportunidade/${created.id}`)
+        }
       } else {
-        const created = await createOportunidade(formData)
-        toast({ title: 'Sucesso', description: 'Oportunidade cadastrada com sucesso!' })
-        navigate(`/oportunidade/${created.id}`)
+        // Envio JSON plano (sem arquivo) — evita totalmente a armadilha do FormData.
+        const payload: any = {
+          ...form,
+          ...computed,
+          participantes: participantes,
+        }
+        if (isAdmin) {
+          payload.observadores = observadores
+        }
+
+        if (isEdit && id) {
+          await updateOportunidade(id, payload)
+          toast({ title: 'Sucesso', description: 'Oportunidade atualizada com sucesso!' })
+          navigate(`/oportunidade/${id}`)
+        } else {
+          const created = await createOportunidade(payload)
+          toast({ title: 'Sucesso', description: 'Oportunidade cadastrada com sucesso!' })
+          navigate(`/oportunidade/${created.id}`)
+        }
       }
     } catch (err) {
       setFieldErrors(extractFieldErrors(err))

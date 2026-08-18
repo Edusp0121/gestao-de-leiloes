@@ -199,11 +199,8 @@ export function LancamentoFormModal({
       return
     }
 
-    // Sem participantes carregados: só auto-preenche no modo de edição de
-    // lançamento antigo (quem_pagou vazio), para não travar o campo.
-    if (editLancamento && !editLancamento.quem_pagou) {
-      setQuemPagou('A')
-    }
+    // Sem participantes carregados ainda (por exemplo, durante carregamento): não define
+    // fallback 'A' prematuramente se não soubermos a quantidade real de participantes.
   }, [open, participantes, editLancamento])
 
   const handleTipoChange = (v: 'Despesa' | 'Receita') => {
