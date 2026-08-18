@@ -148,8 +148,7 @@ export default function NovaAnalise() {
     let active = true
     if (!id) {
       setForm({ ...DEFAULT_FORM })
-      // O criador é sempre participante.
-      setParticipantes(currentUserId ? [currentUserId] : [])
+      setParticipantes([])
       setObservadores([])
       setLoadingOp(false)
       return
@@ -162,12 +161,8 @@ export default function NovaAnalise() {
         // Sempre trata participantes/observadores como arrays.
         const parts = toIdArray(op.participantes)
         const obs = toIdArray(op.observadores)
-        // O criador é sempre garantido como participante (para exibição).
-        const partsWithCreator =
-          currentUserId && !parts.includes(currentUserId) ? [...parts, currentUserId] : parts
-        setParticipantes(partsWithCreator)
-        // Observadores não podem incluir o criador (sanidade).
-        setObservadores(obs.filter((o) => o !== currentUserId))
+        setParticipantes(parts)
+        setObservadores(obs)
       })
       .catch(() => {
         if (active) {
@@ -185,7 +180,7 @@ export default function NovaAnalise() {
     return () => {
       active = false
     }
-  }, [id, currentUserId])
+  }, [id])
 
   const handleChange = (field: string, value: any) => {
     setForm((prev) => {
@@ -291,13 +286,8 @@ export default function NovaAnalise() {
       Object.entries(computed).forEach(([key, val]) => {
         formData.append(key, String(val))
       })
-      // Participantes (garante o criador incluso).
-      const parts =
-        currentUserId && !participantes.includes(currentUserId)
-          ? [...participantes, currentUserId]
-          : participantes
-      parts.forEach((pid) => formData.append('participantes', pid))
-      // Observadores — apenas admin envia (o hook bloqueia não-admin).
+      // Participantes e Observadores (enviados se houver valores).
+      participantes.forEach((pid) => formData.append('participantes', pid))
       if (isAdmin) {
         observadores.forEach((oid) => formData.append('observadores', oid))
       }

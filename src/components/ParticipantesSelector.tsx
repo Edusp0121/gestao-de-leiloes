@@ -70,7 +70,6 @@ export function ParticipantesSelector({
   }
   const removeFromParticipantes = (id: string) => {
     if (!isAdmin) return
-    if (id === creatorId) return // criador sempre fica como participante
     onChange(
       participantes.filter((x) => x !== id),
       observadores,
@@ -85,7 +84,6 @@ export function ParticipantesSelector({
   }
   const moveToObservadores = (id: string) => {
     if (!isAdmin) return
-    if (id === creatorId) return
     onChange(
       participantes.filter((x) => x !== id),
       Array.from(new Set([...observadores, id])),
@@ -104,7 +102,6 @@ export function ParticipantesSelector({
 
   const renderPill = (u: UserRef, group: 'participante' | 'observador') => {
     const isPart = group === 'participante'
-    const isCreator = u.id === creatorId
     return (
       <Badge
         key={`${group}-${u.id}`}
@@ -126,9 +123,6 @@ export function ParticipantesSelector({
         </span>
         <span className="font-medium text-[#2D1B0E]">{u.name || u.email || 'Usuário'}</span>
         {u.email && <span className="text-xs text-[#7A6A5A]">{u.email}</span>}
-        {isCreator && (
-          <span className="text-[10px] uppercase font-bold text-[#8B5A2B]">criador</span>
-        )}
         {isAdmin && (
           <span className="ml-0.5 flex items-center gap-0.5">
             {isPart ? (
@@ -137,7 +131,6 @@ export function ParticipantesSelector({
                 onClick={() => moveToObservadores(u.id)}
                 className="hover:text-blue-500"
                 title="Mover para Observador"
-                disabled={isCreator}
               >
                 <ArrowRight className="w-3 h-3" />
               </button>
@@ -151,18 +144,16 @@ export function ParticipantesSelector({
                 <ArrowLeft className="w-3 h-3" />
               </button>
             )}
-            {!isCreator && (
-              <button
-                type="button"
-                onClick={() =>
-                  isPart ? removeFromParticipantes(u.id) : removeFromObservadores(u.id)
-                }
-                className="hover:text-red-500"
-                title="Remover"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() =>
+                isPart ? removeFromParticipantes(u.id) : removeFromObservadores(u.id)
+              }
+              className="hover:text-red-500"
+              title="Remover"
+            >
+              <X className="w-3 h-3" />
+            </button>
           </span>
         )}
       </Badge>
@@ -242,7 +233,6 @@ export function ParticipantesSelector({
                   {filtered.map((u) => {
                     const isPart = partSet.has(u.id)
                     const isObs = obsSet.has(u.id)
-                    const isCreator = u.id === creatorId
                     return (
                       <div
                         key={u.id}
@@ -254,11 +244,6 @@ export function ParticipantesSelector({
                           </span>
                           {u.email && (
                             <span className="text-xs text-[#7A6A5A] truncate">{u.email}</span>
-                          )}
-                          {isCreator && (
-                            <span className="text-[10px] uppercase font-bold text-[#8B5A2B]">
-                              criador
-                            </span>
                           )}
                           {isPart && (
                             <span className="text-[10px] uppercase font-bold text-[#16A34A]">
@@ -275,10 +260,10 @@ export function ParticipantesSelector({
                           <button
                             type="button"
                             onClick={() => addToParticipantes(u.id)}
-                            disabled={isPart || isCreator}
+                            disabled={isPart}
                             className={cn(
                               'text-xs px-2 py-1 rounded border',
-                              isPart || isCreator
+                              isPart
                                 ? 'opacity-40 cursor-not-allowed border-[#EDE4D8] text-[#7A6A5A]'
                                 : 'border-[#86EFAC] text-[#166534] hover:bg-[#DCFCE7]',
                             )}
@@ -312,11 +297,6 @@ export function ParticipantesSelector({
       ) : (
         <p className="text-xs text-[#7A6A5A]">
           Apenas administradores podem adicionar, remover ou mover pessoas entre os grupos.
-        </p>
-      )}
-      {isAdmin && (
-        <p className="text-xs text-[#7A6A5A]">
-          O criador da oportunidade é sempre incluído automaticamente como participante.
         </p>
       )}
     </div>

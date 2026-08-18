@@ -165,14 +165,10 @@ export const createOportunidade = (data: Partial<Oportunidade> | FormData) => {
   const isAdmin = isCurrentUserAdmin()
   if (data instanceof FormData) {
     if (userId && !data.has('usuario')) data.append('usuario', userId)
-    // Garante que o criador seja sempre participante.
-    if (userId && !data.has('participantes')) data.append('participantes', userId)
     return pb.collection('oportunidades').create<Oportunidade>(data)
   }
   const payload: Partial<Oportunidade> = { ...data, usuario: userId }
-  // Não-admin só pode ter a si mesmo como participante; admin pode definir livremente.
   if (!isAdmin) {
-    payload.participantes = withCreator(payload.participantes)
     delete payload.observadores
   }
   return pb.collection('oportunidades').create<Oportunidade>(payload)
@@ -184,13 +180,9 @@ export const updateOportunidade = (id: string, data: Partial<Oportunidade> | For
     return pb.collection('oportunidades').update<Oportunidade>(id, data)
   }
   const payload: Partial<Oportunidade> = { ...data }
-  // Não-admin não pode alterar grupos; removemos do payload por segurança
-  // (o hook do backend também bloqueia).
   if (!isAdmin) {
     delete payload.participantes
     delete payload.observadores
-  } else if (payload.participantes) {
-    payload.participantes = withCreator(payload.participantes)
   }
   return pb.collection('oportunidades').update<Oportunidade>(id, payload)
 }
