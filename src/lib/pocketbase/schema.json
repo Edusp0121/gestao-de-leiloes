@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-18T16:34:15.726Z",
+  "generatedAt": "2026-08-18T19:46:14.314Z",
   "collections": [
     {
       "name": "users",
@@ -368,6 +368,18 @@
           "system": false
         },
         {
+          "name": "valor_prefeitura_venal",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "uf",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
           "name": "participantes",
           "type": "relation",
           "required": false,
@@ -380,18 +392,6 @@
           "required": false,
           "system": false,
           "collectionRef": "users"
-        },
-        {
-          "name": "valor_prefeitura_venal",
-          "type": "number",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "uf",
-          "type": "text",
-          "required": false,
-          "system": false
         }
       ],
       "indexes": [
