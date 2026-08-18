@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-18T19:46:14.314Z",
+  "generatedAt": "2026-08-18T20:25:29.588Z",
   "collections": [
     {
       "name": "users",
@@ -54,10 +54,10 @@
       "name": "oportunidades",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && (usuario = @request.auth.id || participantes = @request.auth.id || observadores = @request.auth.id || @request.auth.admin = true)",
-        "view": "@request.auth.id != '' && (usuario = @request.auth.id || participantes = @request.auth.id || observadores = @request.auth.id || @request.auth.admin = true)",
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
         "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != '' && (usuario = @request.auth.id || participantes = @request.auth.id || @request.auth.admin = true)",
+        "update": "@request.auth.id != ''",
         "delete": "@request.auth.id != '' && (usuario = @request.auth.id || @request.auth.admin = true)"
       },
       "fields": [
