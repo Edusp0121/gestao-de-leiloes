@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-21T14:09:26.572Z",
+  "generatedAt": "2026-08-21T15:05:53.262Z",
   "collections": [
     {
       "name": "users",
@@ -401,6 +401,19 @@
         },
         {
           "name": "dividas_iptu",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "indice_correcao",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["IPCA", "TR", "IGPM", "INPC", "Manual"]
+        },
+        {
+          "name": "correcao_saldo_manual",
           "type": "number",
           "required": false,
           "system": false

@@ -31,8 +31,32 @@ import { calculateInstallment, calculateSaldoDevedor, FinancingParams } from '@/
 import { ParticipantesSelector } from '@/components/ParticipantesSelector'
 import pb from '@/lib/pocketbase/client'
 import { calculateEscritura, calculateRegistroEAverbacao } from '@/lib/cartorio-utils'
+import { fetchUltimoIndiceBacen, type IndiceBacenTipo } from '@/lib/bacen-utils'
+import { Loader2 } from 'lucide-react'
 
-const AGENTES = ['Caixa', 'Bradesco', 'Itaú', 'Santander', 'Emgea', 'Direto', 'Outros']
+const AGENTES = [
+  'Caixa Balcão',
+  'Caixa Leilão',
+  'MCMV',
+  'Emgea',
+  'Itaú',
+  'Bradesco',
+  'Santander',
+  'Outros',
+]
+
+const TAXAS_JUROS_AGENTES: Record<string, number> = {
+  'Caixa Balcão': 11.49,
+  'Caixa Leilão': 10.99,
+  MCMV: 4.59,
+  Emgea: 8.0,
+  Itaú: 11.6,
+  Bradesco: 11.7,
+  Santander: 11.69,
+  Outros: 9.99,
+}
+
+const INDICES_CORRECAO: IndiceBacenTipo[] = ['IPCA', 'TR', 'IGPM', 'INPC', 'Manual']
 
 const UFS = [
   'AC',
@@ -69,13 +93,15 @@ const DEFAULT_FORM = {
   endereco: '',
   uf: '',
   tipo_leilao: 'Judicial' as 'Judicial' | 'Extrajudicial',
-  banco_selecionado: 'Caixa',
+  banco_selecionado: 'Caixa Balcão',
   data_aquisicao: new Date().toISOString().split('T')[0],
   status: 'Em análise' as 'Em análise' | 'Arrematada' | 'Em andamento' | 'Vendida',
   desagio_venda: 10,
   valor_mercado: 240000,
   valor_arrematacao: 101200,
   tempo_estimado_venda_meses: 10,
+  indice_correcao: 'TR' as IndiceBacenTipo,
+  correcao_saldo_manual: 0.17,
   indice_correcao_medio_mensal: 0.17,
   itbi_percent: 3,
   comissao_leiloeiro_percent: 5,
@@ -88,7 +114,7 @@ const DEFAULT_FORM = {
   condominio_iptu_mensal: 1926,
   modalidade_financiamento: 'PRICE' as 'À Vista' | 'SAC' | 'PRICE',
   banco_responsavel_financiamento: '',
-  taxa_juros_financiamento: 8,
+  taxa_juros_financiamento: 11.49,
   aliquota_reajuste: 0,
   valor_parcela_mensal: 1105.05,
   saldo_devedor: 89576.33,
@@ -136,6 +162,8 @@ export default function NovaAnalise() {
   const [usuarios, setUsuarios] = useState<UserRef[]>([])
   const [participantes, setParticipantes] = useState<string[]>([])
   const [observadores, setObservadores] = useState<string[]>([])
+  const [loadingBacen, setLoadingBacen] = useState(false)
+  const [bacenInfoText, setBacenInfoText] = useState<string>('')
 
   const currentUserId = pb.authStore.record?.id
   const isAdmin = isCurrentUserAdmin()
@@ -159,7 +187,22 @@ export default function NovaAnalise() {
     getOportunidade(id)
       .then((op) => {
         if (!active) return
-        setForm(formFromOportunidade(op))
+        const loadedForm = formFromOportunidade(op)
+        // Se a oportunidade tiver indice_correcao salvo e não for Manual, busca info para feedback visual
+        if (loadedForm.indice_correcao && loadedForm.indice_correcao !== 'Manual') {
+          fetchUltimoIndiceBacen(loadedForm.indice_correcao as Exclude<IndiceBacenTipo, 'Manual'>)
+            .then((res) => {
+              if (active) setBacenInfoText(res.textoExibicao)
+            })
+            .catch(() => {
+              if (active) {
+                setBacenInfoText(
+                  `${loadedForm.indice_correcao} — ${Number(loadedForm.indice_correcao_medio_mensal || 0).toLocaleString('pt-BR')}%`,
+                )
+              }
+            })
+        }
+        setForm(loadedForm)
         // Sempre trata participantes/observadores como arrays.
         const parts = toIdArray(op.participantes)
         const obs = toIdArray(op.observadores)
@@ -184,9 +227,69 @@ export default function NovaAnalise() {
     }
   }, [id])
 
+  // Ao criar nova análise (sem id), carrega índice inicial (ex: TR)
+  useEffect(() => {
+    if (!id) {
+      handleIndiceChange('TR')
+    }
+  }, [id])
+
+  const handleIndiceChange = async (novoIndice: IndiceBacenTipo) => {
+    setForm((prev) => ({
+      ...prev,
+      indice_correcao: novoIndice,
+    }))
+    setFieldErrors((prev) => ({ ...prev, indice_correcao: '', correcao_saldo_manual: '' }))
+
+    if (novoIndice === 'Manual') {
+      setBacenInfoText('')
+      setForm((prev) => ({
+        ...prev,
+        indice_correcao_medio_mensal: Number(prev.correcao_saldo_manual) || 0,
+      }))
+      return
+    }
+
+    setLoadingBacen(true)
+    try {
+      const res = await fetchUltimoIndiceBacen(novoIndice)
+      setBacenInfoText(res.textoExibicao)
+      setForm((prev) => ({
+        ...prev,
+        indice_correcao_medio_mensal: res.valor,
+      }))
+      toast({
+        title: `Índice ${novoIndice} atualizado`,
+        description: res.textoExibicao,
+      })
+    } catch (err: any) {
+      setBacenInfoText('')
+      toast({
+        title: `Erro ao consultar BACEN para ${novoIndice}`,
+        description: err?.message || 'Não foi possível carregar a cotação do Banco Central.',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoadingBacen(false)
+    }
+  }
+
   const handleChange = (field: string, value: any) => {
     setForm((prev) => {
       const next = { ...prev, [field]: value }
+
+      // 1. Taxa de juros automática por agente selecionado
+      if (field === 'banco_selecionado') {
+        const taxaAuto = TAXAS_JUROS_AGENTES[value]
+        if (taxaAuto !== undefined) {
+          next.taxa_juros_financiamento = taxaAuto
+        }
+      }
+
+      // Se mudar correcao_saldo_manual no modo Manual, sincroniza com indice_correcao_medio_mensal
+      if (field === 'correcao_saldo_manual' && prev.indice_correcao === 'Manual') {
+        next.indice_correcao_medio_mensal = Number(value) || 0
+      }
 
       // Lógica de preenchimento automático para Escritura, Registro e Averbação:
       // Executa se UF, valor_arrematacao ou valor_prefeitura_venal forem alterados.
@@ -221,7 +324,6 @@ export default function NovaAnalise() {
     })
     setFieldErrors((prev) => ({ ...prev, [field]: '' }))
   }
-
   const computed = {
     ...calculateMetrics({
       valor_mercado: Number(form.valor_mercado),
@@ -563,13 +665,56 @@ export default function NovaAnalise() {
             {numericFieldError('tempo_estimado_venda_meses')}
           </div>
           <div className="space-y-2">
-            <Label>Índice Correção Média Mensal — TR (%)</Label>
+            <Label>Índice de Correção de Saldo</Label>
+            <div className="flex gap-2 items-center">
+              <Select
+                value={form.indice_correcao}
+                onValueChange={(v) => handleIndiceChange(v as IndiceBacenTipo)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {INDICES_CORRECAO.map((ind) => (
+                    <SelectItem key={ind} value={ind}>
+                      {ind}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {loadingBacen && <Loader2 className="w-4 h-4 animate-spin text-[#F97316]" />}
+            </div>
+            {form.indice_correcao === 'Manual' ? (
+              <div className="mt-2 space-y-1">
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="Informe a taxa mensal (%)"
+                  value={form.correcao_saldo_manual}
+                  onChange={(e) => handleChange('correcao_saldo_manual', e.target.value)}
+                />
+                <p className="text-xs text-[#7A6A5A]">Valor manual em % ao mês.</p>
+              </div>
+            ) : (
+              bacenInfoText && (
+                <p className="text-xs font-semibold text-[#16A34A] bg-[#DCFCE7] px-2 py-1 rounded border border-[#86EFAC] mt-1">
+                  {bacenInfoText}
+                </p>
+              )
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label>Taxa de Juros Financiamento (% a.a.)</Label>
             <Input
               type="number"
               step="0.01"
-              value={form.indice_correcao_medio_mensal}
-              onChange={(e) => handleChange('indice_correcao_medio_mensal', e.target.value)}
+              value={form.taxa_juros_financiamento}
+              onChange={(e) => handleChange('taxa_juros_financiamento', e.target.value)}
             />
+            <p className="text-xs text-[#7A6A5A]">
+              Preenchida automaticamente pelo Agente (editável).
+            </p>
+            {numericFieldError('taxa_juros_financiamento')}
           </div>
           <div className="space-y-2">
             <Label>Prazo do Financiamento (meses)</Label>

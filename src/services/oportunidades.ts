@@ -22,6 +22,8 @@ export interface Oportunidade {
   valor_mercado?: number
   desagio_venda?: number
   tempo_estimado_venda_meses?: number
+  indice_correcao?: 'IPCA' | 'TR' | 'IGPM' | 'INPC' | 'Manual'
+  correcao_saldo_manual?: number
   indice_correcao_medio_mensal?: number
   itbi_percent?: number
   comissao_leiloeiro_percent?: number
@@ -186,7 +188,6 @@ export const updateOportunidade = (id: string, data: Partial<Oportunidade> | For
   }
   const payload: Partial<Oportunidade> = { ...data }
   if (!isAdmin) {
-    delete payload.participantes
     delete payload.observadores
   }
   return pb.collection('oportunidades').update<Oportunidade>(id, payload)
