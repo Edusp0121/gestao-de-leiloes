@@ -402,9 +402,7 @@ export default function NovaAnalise() {
         // repetidos appends de 'participantes' e 'observadores' funcionam se enviados no FormData.
         // Contudo, se o array for vazio ou se o SDK esperar entradas indexadas/repetidas:
         participantes.forEach((pid) => formData.append('participantes', pid))
-        if (isAdmin) {
-          observadores.forEach((oid) => formData.append('observadores', oid))
-        }
+        observadores.forEach((oid) => formData.append('observadores', oid))
         formData.append('relatorio_viabilidade', relatorioFile)
 
         if (isEdit && id) {
@@ -422,9 +420,7 @@ export default function NovaAnalise() {
           ...form,
           ...computed,
           participantes: participantes,
-        }
-        if (isAdmin) {
-          payload.observadores = observadores
+          observadores: observadores,
         }
 
         if (isEdit && id) {
@@ -591,7 +587,7 @@ export default function NovaAnalise() {
             participantes={participantes}
             observadores={observadores}
             creatorId={currentUserId}
-            isAdmin={isAdmin}
+            canManage={true}
             onChange={(p, o) => {
               setParticipantes(p)
               setObservadores(o)

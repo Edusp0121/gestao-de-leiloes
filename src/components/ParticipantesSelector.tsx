@@ -14,7 +14,9 @@ interface ParticipantesSelectorProps {
   observadores: string[]
   /** ID do criador atual (sempre incluso como participante e imutável). */
   creatorId?: string
-  /** Se o usuário atual é admin (controla permissão de edição dos grupos). */
+  /** Se o usuário atual tem permissão para gerenciar os participantes e observadores. */
+  canManage?: boolean
+  /** Mantido por retrocompatibilidade se passado */
   isAdmin?: boolean
   onChange: (participantes: string[], observadores: string[]) => void
 }
@@ -24,9 +26,11 @@ export function ParticipantesSelector({
   participantes,
   observadores,
   creatorId,
+  canManage = true,
   isAdmin = false,
   onChange,
 }: ParticipantesSelectorProps) {
+  const allowEdit = canManage || isAdmin
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
@@ -57,40 +61,40 @@ export function ParticipantesSelector({
   const obsSet = new Set(observadores)
 
   const addToParticipantes = (id: string) => {
-    if (!isAdmin) return
+    if (!allowEdit) return
     if (partSet.has(id)) return
     const nextObs = observadores.filter((x) => x !== id)
     onChange(Array.from(new Set([...participantes, id])), nextObs)
   }
   const addToObservadores = (id: string) => {
-    if (!isAdmin) return
+    if (!allowEdit) return
     if (obsSet.has(id)) return
     const nextPart = participantes.filter((x) => x !== id)
     onChange(nextPart, Array.from(new Set([...observadores, id])))
   }
   const removeFromParticipantes = (id: string) => {
-    if (!isAdmin) return
+    if (!allowEdit) return
     onChange(
       participantes.filter((x) => x !== id),
       observadores,
     )
   }
   const removeFromObservadores = (id: string) => {
-    if (!isAdmin) return
+    if (!allowEdit) return
     onChange(
       participantes,
       observadores.filter((x) => x !== id),
     )
   }
   const moveToObservadores = (id: string) => {
-    if (!isAdmin) return
+    if (!allowEdit) return
     onChange(
       participantes.filter((x) => x !== id),
       Array.from(new Set([...observadores, id])),
     )
   }
   const moveToParticipantes = (id: string) => {
-    if (!isAdmin) return
+    if (!allowEdit) return
     onChange(
       Array.from(new Set([...participantes, id])),
       observadores.filter((x) => x !== id),
@@ -123,7 +127,7 @@ export function ParticipantesSelector({
         </span>
         <span className="font-medium text-[#2D1B0E]">{u.name || u.email || 'Usuário'}</span>
         {u.email && <span className="text-xs text-[#7A6A5A]">{u.email}</span>}
-        {isAdmin && (
+        {allowEdit && (
           <span className="ml-0.5 flex items-center gap-0.5">
             {isPart ? (
               <button
@@ -199,8 +203,8 @@ export function ParticipantesSelector({
         </div>
       </div>
 
-      {/* Adicionar pessoas — somente admin */}
-      {isAdmin ? (
+      {/* Adicionar pessoas */}
+      {allowEdit ? (
         <div className="relative" ref={containerRef}>
           <button
             type="button"
@@ -296,7 +300,7 @@ export function ParticipantesSelector({
         </div>
       ) : (
         <p className="text-xs text-[#7A6A5A]">
-          Apenas administradores podem adicionar, remover ou mover pessoas entre os grupos.
+          Sem permissão para alterar participantes e observadores.
         </p>
       )}
     </div>

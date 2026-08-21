@@ -166,7 +166,6 @@ function withCreator(participantes: string[] | null | undefined): string[] {
 
 export const createOportunidade = (data: Partial<Oportunidade> | FormData) => {
   const userId = pb.authStore.record?.id
-  const isAdmin = isCurrentUserAdmin()
   if (data instanceof FormData) {
     if (userId && !data.has('usuario')) data.append('usuario', userId)
     return pb.collection('oportunidades').create<Oportunidade>(data)
@@ -175,21 +174,14 @@ export const createOportunidade = (data: Partial<Oportunidade> | FormData) => {
   if (!payload.usuario && userId) {
     payload.usuario = userId
   }
-  if (!isAdmin) {
-    delete payload.observadores
-  }
   return pb.collection('oportunidades').create<Oportunidade>(payload)
 }
 
 export const updateOportunidade = (id: string, data: Partial<Oportunidade> | FormData) => {
-  const isAdmin = isCurrentUserAdmin()
   if (data instanceof FormData) {
     return pb.collection('oportunidades').update<Oportunidade>(id, data)
   }
   const payload: Partial<Oportunidade> = { ...data }
-  if (!isAdmin) {
-    delete payload.observadores
-  }
   return pb.collection('oportunidades').update<Oportunidade>(id, payload)
 }
 
