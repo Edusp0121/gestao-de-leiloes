@@ -44,8 +44,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signUp = async (email: string, password: string, name?: string) => {
     try {
+      const normalizedEmail = email.trim().toLowerCase()
       await pb.collection('users').create({
-        email,
+        email: normalizedEmail,
+        emailVisibility: true,
         password,
         passwordConfirm: password,
         name: name || 'Investidor',

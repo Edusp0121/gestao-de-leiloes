@@ -221,11 +221,11 @@ export const getUsuarios = async (): Promise<UserRef[]> => {
  * Administrador ("Doulhe3" ou admin === true) é desconsiderado.
  */
 export const findUserByEmail = async (email: string): Promise<UserRef | null> => {
-  const trimmed = email.trim()
-  if (!trimmed) return null
+  const normalized = email.trim().toLowerCase()
+  if (!normalized) return null
   try {
     const res = await pb.collection('users').getList<UserRef & { admin?: boolean }>(1, 1, {
-      filter: pb.filter('email = {:email}', { email: trimmed }),
+      filter: pb.filter('email = {:email}', { email: normalized }),
       fields: 'id,name,email,admin',
     })
     if (!res.items || res.items.length === 0) return null
