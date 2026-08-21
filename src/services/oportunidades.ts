@@ -33,6 +33,8 @@ export interface Oportunidade {
   reforma_prevista?: number
   assessoria_juridica?: number
   condominio_iptu_mensal?: number
+  dividas_condominio?: number
+  dividas_iptu?: number
   modalidade_financiamento?: 'À Vista' | 'SAC' | 'PRICE'
   banco_responsavel_financiamento?: string
   taxa_juros_financiamento?: number

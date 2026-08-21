@@ -46,7 +46,11 @@ export function categorizeExpense(descricao: string): ExpenseCategory {
     desc.includes('prestacao') ||
     desc.includes('condomínio') ||
     desc.includes('condominio') ||
-    desc.includes('iptu')
+    desc.includes('iptu') ||
+    desc.includes('dívidas condomínio') ||
+    desc.includes('dividas condominio') ||
+    desc.includes('dívidas iptu') ||
+    desc.includes('dividas iptu')
   ) {
     return 'Mensais'
   }
@@ -204,7 +208,9 @@ export function getEstimatedCostsByCategory(op?: any): Record<ExpenseCategory, n
       prestacoesPagas = valorParcelaCalc * prazo
     }
   }
-  const mensais = prestacoesPagas + condominioIptuMensal * prazo
+  const dividasCondominio = num(op.dividas_condominio)
+  const dividasIptu = num(op.dividas_iptu)
+  const mensais = prestacoesPagas + condominioIptuMensal * prazo + dividasCondominio + dividasIptu
 
   // Venda (categoria do gráfico comparativo):
   // O valor ESTIMADO da categoria Venda no gráfico comparativo de viabilidade é o Valor Total de Venda da oportunidade.
@@ -249,7 +255,7 @@ export const CATEGORY_DESCRIPTIONS: Record<ExpenseCategory, string[]> = {
   Aquisição: ['Sinal', 'Leiloeiro'],
   Tributos: ['ITBI', 'Escritura', 'Registro', 'Averbação AF'],
   Desocupação: ['Acordo', 'Reforma', 'Honorários', 'Custas'],
-  Mensais: ['Prestação', 'Condomínio', 'IPTU'],
+  Mensais: ['Prestação', 'Condomínio', 'IPTU', 'Dívidas Condomínio', 'Dívidas IPTU'],
   Venda: ['Corretagem', 'Lucro Imobiliário', 'Venda', 'Locação', 'Saldo Devedor'],
 }
 

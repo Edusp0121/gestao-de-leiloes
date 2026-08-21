@@ -15,6 +15,8 @@ export interface CalculatorInputs {
   reforma_prevista?: number
   assessoria_juridica?: number
   condominio_iptu_mensal?: number
+  dividas_condominio?: number
+  dividas_iptu?: number
   ir_percent?: number
   incluir_ir_despesas?: boolean
   taxa_avaliacao?: number
@@ -59,7 +61,9 @@ export function calculateMetrics(inputs: CalculatorInputs) {
   const itbi = valorBaseITBI * (itbiPct / 100)
   const comissaoCorretor = valorVendaComDesconto * (comissaoCorretorPct / 100)
   const custosCartorio = escritura + registro + averbacao
-  const custosManutencao = condominioIptu * tempoMeses
+  const dividasCondominio = Number(inputs.dividas_condominio) || 0
+  const dividasIptu = Number(inputs.dividas_iptu) || 0
+  const custosManutencao = condominioIptu * tempoMeses + dividasCondominio + dividasIptu
 
   const capitalNecessario =
     valorArrematacao +

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-18T23:12:53.327Z",
+  "generatedAt": "2026-08-21T14:09:26.572Z",
   "collections": [
     {
       "name": "users",
@@ -392,6 +392,18 @@
           "required": false,
           "system": false,
           "collectionRef": "users"
+        },
+        {
+          "name": "dividas_condominio",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "dividas_iptu",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [

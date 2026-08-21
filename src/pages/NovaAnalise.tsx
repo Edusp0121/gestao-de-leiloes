@@ -103,6 +103,8 @@ const DEFAULT_FORM = {
   acordo_desocupacao: 0,
   baixa_gravames: 0,
   foro: 0,
+  dividas_condominio: 0,
+  dividas_iptu: 0,
 }
 
 function formFromOportunidade(op: Oportunidade) {
@@ -235,6 +237,8 @@ export default function NovaAnalise() {
       reforma_prevista: Number(form.reforma_prevista),
       assessoria_juridica: Number(form.assessoria_juridica),
       condominio_iptu_mensal: Number(form.condominio_iptu_mensal),
+      dividas_condominio: Number(form.dividas_condominio),
+      dividas_iptu: Number(form.dividas_iptu),
       ir_percent: Number(form.ir_percent),
       incluir_ir_despesas: form.incluir_ir_despesas,
       taxa_avaliacao: Number(form.taxa_avaliacao),
@@ -726,6 +730,26 @@ export default function NovaAnalise() {
                   value={form.condominio_iptu_mensal}
                   onChange={(e) => handleChange('condominio_iptu_mensal', e.target.value)}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>Dívidas de Condomínio (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.dividas_condominio}
+                  onChange={(e) => handleChange('dividas_condominio', e.target.value)}
+                />
+                {numericFieldError('dividas_condominio')}
+              </div>
+              <div className="space-y-2">
+                <Label>Dívidas de IPTU (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.dividas_iptu}
+                  onChange={(e) => handleChange('dividas_iptu', e.target.value)}
+                />
+                {numericFieldError('dividas_iptu')}
               </div>
             </div>
           </div>
