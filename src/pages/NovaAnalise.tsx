@@ -169,10 +169,12 @@ export default function NovaAnalise() {
   const isAdmin = isCurrentUserAdmin()
 
   useEffect(() => {
-    getUsuarios()
-      .then(setUsuarios)
-      .catch(() => {})
-  }, [])
+    if (isAdmin) {
+      getUsuarios()
+        .then(setUsuarios)
+        .catch(() => {})
+    }
+  }, [isAdmin])
 
   useEffect(() => {
     let active = true
@@ -208,6 +210,22 @@ export default function NovaAnalise() {
         const obs = toIdArray(op.observadores)
         setParticipantes(parts)
         setObservadores(obs)
+
+        // Se houver expand de participantes/observadores/usuario, guarda em setUsuarios para exibição correta dos nomes
+        const loadedUsers: UserRef[] = []
+        if (op.expand?.usuario) loadedUsers.push(op.expand.usuario)
+        if (Array.isArray(op.expand?.participantes)) loadedUsers.push(...op.expand.participantes)
+        if (Array.isArray(op.expand?.observadores)) loadedUsers.push(...op.expand.observadores)
+        if (loadedUsers.length > 0) {
+          setUsuarios((prev) => {
+            const map = new Map<string, UserRef>()
+            prev.forEach((u) => map.set(u.id, u))
+            loadedUsers.forEach((u) => {
+              if (u && u.id && !map.has(u.id)) map.set(u.id, u)
+            })
+            return Array.from(map.values())
+          })
+        }
       })
       .catch(() => {
         if (active) {
@@ -588,6 +606,8 @@ export default function NovaAnalise() {
             observadores={observadores}
             creatorId={currentUserId}
             canManage={true}
+            isAdmin={isAdmin}
+            searchMode={isAdmin ? 'browse' : 'email-lookup'}
             onChange={(p, o) => {
               setParticipantes(p)
               setObservadores(o)

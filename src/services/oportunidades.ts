@@ -214,3 +214,29 @@ export const getUsuarios = async (): Promise<UserRef[]> => {
     return []
   }
 }
+
+/**
+ * Consulta a coleção `users` com filtro exato de email.
+ * Retorna o registro do usuário se encontrado, ou `null` se não existir.
+ * Administrador ("Doulhe3" ou admin === true) é desconsiderado.
+ */
+export const findUserByEmail = async (email: string): Promise<UserRef | null> => {
+  const trimmed = email.trim()
+  if (!trimmed) return null
+  try {
+    const res = await pb.collection('users').getList<UserRef & { admin?: boolean }>(1, 1, {
+      filter: pb.filter('email = {:email}', { email: trimmed }),
+      fields: 'id,name,email,admin',
+    })
+    if (!res.items || res.items.length === 0) return null
+    const found = res.items[0]
+    if (found.admin === true || found.name === 'Doulhe3') return null
+    return {
+      id: found.id,
+      name: found.name,
+      email: found.email,
+    }
+  } catch {
+    return null
+  }
+}
