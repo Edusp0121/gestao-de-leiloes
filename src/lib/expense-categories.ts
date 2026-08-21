@@ -18,13 +18,16 @@ export function categorizeExpense(descricao: string): ExpenseCategory {
     return 'Aquisição'
   }
 
-  // Tributos: ITBI, Escritura, Registro, Averbação AF
+  // Tributos: ITBI, Escritura, Registro, Averbação AF, Taxa de Avaliação, Despesas
   if (
     desc.includes('itbi') ||
     desc.includes('escritura') ||
     desc.includes('registro') ||
     desc.includes('averbação') ||
-    desc.includes('averbacao')
+    desc.includes('averbacao') ||
+    desc.includes('taxa de avaliação') ||
+    desc.includes('taxa de avaliacao') ||
+    desc.includes('despesas')
   ) {
     return 'Tributos'
   }
@@ -253,7 +256,7 @@ export function getRealCostsByCategory(
 
 export const CATEGORY_DESCRIPTIONS: Record<ExpenseCategory, string[]> = {
   Aquisição: ['Sinal', 'Leiloeiro'],
-  Tributos: ['ITBI', 'Escritura', 'Registro', 'Averbação AF'],
+  Tributos: ['ITBI', 'Escritura', 'Registro', 'Averbação AF', 'Taxa de Avaliação', 'Despesas'],
   Desocupação: ['Acordo', 'Reforma', 'Honorários', 'Custas'],
   Mensais: ['Prestação', 'Condomínio', 'IPTU', 'Dívidas Condomínio', 'Dívidas IPTU'],
   Venda: ['Corretagem', 'Lucro Imobiliário', 'Venda', 'Locação', 'Saldo Devedor'],
