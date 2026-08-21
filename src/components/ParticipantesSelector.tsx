@@ -276,7 +276,7 @@ export function ParticipantesSelector({
       {allowEdit ? (
         searchMode === 'email-lookup' ? (
           <div className="space-y-2">
-            <form onSubmit={handleLookupSearch} className="flex gap-2">
+            <div className="flex gap-2">
               <Input
                 type="email"
                 placeholder="Digite o email do usuário"
@@ -285,10 +285,17 @@ export function ParticipantesSelector({
                   setLookupEmail(e.target.value)
                   if (searchMessage) setSearchMessage(null)
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleLookupSearch()
+                  }
+                }}
                 className="flex-1 text-sm border-[#EDE4D8] bg-white focus-visible:ring-[#F97316]"
               />
               <Button
-                type="submit"
+                type="button"
+                onClick={() => handleLookupSearch()}
                 disabled={lookupLoading}
                 className="bg-[#F97316] hover:bg-[#EA580C] text-white gap-1.5 shrink-0"
               >
@@ -299,7 +306,7 @@ export function ParticipantesSelector({
                 )}
                 Buscar
               </Button>
-            </form>
+            </div>
 
             {searchMessage && <p className="text-xs text-[#7A6A5A] px-1">{searchMessage}</p>}
 
