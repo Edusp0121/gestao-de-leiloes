@@ -233,7 +233,7 @@ export function LancamentoFormModal({
         tipo,
         descricao,
         valor: Number(valor),
-        data: data ? `${data} 00:00:00.000Z` : new Date().toISOString(),
+        data: data ? new Date(data + 'T00:00:00').toISOString() : new Date().toISOString(),
         categoria: tipo === 'Despesa' ? categoria : 'Venda',
         quem_pagou: tipo === 'Despesa' ? quemPagou || undefined : undefined,
       }

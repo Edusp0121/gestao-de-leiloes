@@ -334,13 +334,29 @@ export default function OportunidadeDetalhe() {
   const calculatedInstallment = calculateInstallment(financingParams)
   const calculatedSaldoDevedor = calculateSaldoDevedor(financingParams)
 
-  // Retorno estimado DINÂMICO via calcRetornoDinamico
+  // Total Despesas Reais: soma de todos os lançamentos de despesa da oportunidade
+  const totalDespesasReais = lancamentos
+    .filter((l) => l.tipo === 'Despesa')
+    .reduce((acc, l) => acc + l.valor, 0)
+
+  // Retorno Estimado Global:
+  // Retorno Estimado = Venda - Comissão Venda - Total Despesas Reais - Saldo Devedor Atual
+  // Onde:
+  // - Venda: valor de venda estimado (op.valor_venda_com_desconto || op.valor_mercado)
+  // - Comissão Venda: venda * alíquota de comissão (op.comissao_corretor_percent, padrão 6%)
+  // - Total Despesas Reais: soma de todos os lançamentos de despesas da oportunidade
+  // - Saldo Devedor Atual: saldo atual do financiamento (calculatedSaldoDevedor)
+  const valorVendaEstimado = toNum(op.valor_venda_com_desconto) || toNum(op.valor_mercado)
+  const aliquotaComissaoVenda =
+    op.comissao_corretor_percent != null ? toNum(op.comissao_corretor_percent) : 6
+  const comissaoVenda = valorVendaEstimado * (aliquotaComissaoVenda / 100)
+  const retornoEstimadoCalculado =
+    valorVendaEstimado - comissaoVenda - totalDespesasReais - calculatedSaldoDevedor
+  const retornoEstimadoExibido = Math.round(retornoEstimadoCalculado * 100) / 100
+
   const temReceitaVenda = lancamentos.some(
     (l) => l.tipo === 'Receita' && isVendaReceita(l.descricao),
   )
-  const retornoEstimadoExibido = temReceitaVenda
-    ? toNum(op.retorno_estimado) || toNum(op.maior_lucro_esperado)
-    : calcRetornoDinamico({ ...op, saldo_devedor: calculatedSaldoDevedor }, totalInvestidoReal)
 
   // Total Investido (Previsto): apenas o capital necessário estimado das
   // categorias (sem saldo devedor remanescente). Corretagem e IR são custos de venda
