@@ -153,12 +153,22 @@ export default function Dashboard() {
   const chartDataBar = oportunidades.map((op) => {
     const opLancamentos = lancamentos.filter((l) => l.oportunidade === op.id)
     const despesasReaisOp = opLancamentos
-      .filter((l) => l.tipo === 'Despesa' && !isVendaReceita(l.descricao))
+      .filter((l) => l.tipo === 'Despesa')
       .reduce((acc, l) => acc + l.valor, 0)
-    const temReceitaVenda = opLancamentos.some((l) => isVendaReceita(l.descricao))
-    const retorno = temReceitaVenda
-      ? op.retorno_estimado || op.maior_lucro_esperado || 0
-      : calcRetornoDinamico(op, despesasReaisOp > 0 ? despesasReaisOp : undefined)
+
+    // 1. Obter Venda Estimada (op.valor_venda_com_desconto || op.valor_mercado)
+    const valorVenda = Number(op.valor_venda_com_desconto) || Number(op.valor_mercado) || 0
+    // 2. Calcular Comissão Venda (Venda * (op.comissao_corretor_percent || 6) / 100)
+    const aliquotaComissao =
+      op.comissao_corretor_percent != null ? Number(op.comissao_corretor_percent) : 6
+    const comissaoVenda = valorVenda * (aliquotaComissao / 100)
+    // 3. Calcular Total Despesas Reais da oportunidade (soma dos lançamentos tipo Despesa) -> despesasReaisOp
+    // 4. Calcular Saldo Devedor Atual (usando calcSaldoDevedorFinanciamento(op))
+    const saldoDevedor = calcSaldoDevedorFinanciamento(op)
+    // 5. Retorno = Venda - Comissão - Despesas - Saldo Devedor
+    const retornoCalculado = valorVenda - comissaoVenda - despesasReaisOp - saldoDevedor
+    const retorno = Math.round(retornoCalculado * 100) / 100
+
     // Investido reflete o cash outflow real/previsto (despesas reais ou estimadas das categorias),
     // sem somar o saldo devedor remanescente.
     const investido = despesasReaisOp > 0 ? despesasReaisOp : calcCapitalNecessario(op)
