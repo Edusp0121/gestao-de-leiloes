@@ -143,6 +143,7 @@ export function calcSaldoDevedorFinanciamento(op: {
   parcelas_pagas?: number | string | null
   percentual_entrada?: number | string | null
   saldo_devedor?: number | string | null
+  indice_correcao_medio_mensal?: number | string | null
 }): number {
   // Se o registro já possuir `saldo_devedor` calculado (e positivo),
   // usamos esse valor autoritativo — a página de detalhes já o calcula
@@ -180,6 +181,7 @@ export function calcSaldoDevedorFinanciamento(op: {
       op.percentual_entrada == null || toNum(op.percentual_entrada) === 0
         ? 10
         : toNum(op.percentual_entrada),
+    correcaoMensal: toNum(op.indice_correcao_medio_mensal),
   }
   return calculateSaldoDevedor(params)
 }
@@ -235,6 +237,7 @@ export function calcRetornoDinamico(
     parcelas_pagas?: number | string | null
     percentual_entrada?: number | string | null
     saldo_devedor?: number | string | null
+    indice_correcao_medio_mensal?: number | string | null
     custos_estimados_planilha?: any
   },
   despesasReais?: number,

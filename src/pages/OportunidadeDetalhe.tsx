@@ -331,6 +331,7 @@ export default function OportunidadeDetalhe() {
     paymentsMade: (op.parcelas_pagas || 0) + (op.tempo_estimado_venda_meses || 0),
     method: financingMethod,
     entryPercent: op.percentual_entrada || 10,
+    correcaoMensal: op.indice_correcao_medio_mensal || 0,
   }
   const calculatedInstallment = calculateInstallment(financingParams)
   const calculatedSaldoDevedor = calculateSaldoDevedor(financingParams)

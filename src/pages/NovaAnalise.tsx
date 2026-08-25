@@ -379,6 +379,7 @@ export default function NovaAnalise() {
     paymentsMade: Number(form.parcelas_pagas),
     method: form.modalidade_financiamento === 'SAC' ? 'SAC' : 'PRICE',
     entryPercent: Number(form.percentual_entrada) || 10,
+    correcaoMensal: Number(form.indice_correcao_medio_mensal) || 0,
   }
   computed.valor_parcela_mensal = Math.round(calculateInstallment(financingParams) * 100) / 100
   computed.saldo_devedor = Math.round(calculateSaldoDevedor(financingParams) * 100) / 100

@@ -5,6 +5,7 @@ export interface FinancingParams {
   paymentsMade: number
   method: 'SAC' | 'PRICE'
   entryPercent?: number
+  correcaoMensal?: number
 }
 
 export function calculateMonthlyRate(annualRate: number): number {
@@ -48,6 +49,7 @@ export function calculateSaldoDevedor(params: FinancingParams): number {
     paymentsMade = 0,
     method = 'PRICE',
     entryPercent = 10,
+    correcaoMensal = 0,
   } = params
 
   if (!termMonths || termMonths <= 0) return 0
@@ -57,15 +59,51 @@ export function calculateSaldoDevedor(params: FinancingParams): number {
   const monthlyRate = calculateMonthlyRate(annualRate)
   const financedPrincipal = principal > 0 ? principal * (1 - entryPercent / 100) : 91080
 
-  if (method === 'PRICE') {
-    if (monthlyRate === 0) {
-      return Math.max(0, financedPrincipal * (1 - paymentsMade / term))
-    }
-    const factor = Math.pow(1 + monthlyRate, term)
-    const paidFactor = Math.pow(1 + monthlyRate, paymentsMade)
-    return Math.max(0, (financedPrincipal * (factor - paidFactor)) / (factor - 1))
+  if (paymentsMade <= 0) {
+    return financedPrincipal
   }
 
-  const amortization = financedPrincipal / term
-  return Math.max(0, financedPrincipal - amortization * paymentsMade)
+  const correcaoTaxa = (correcaoMensal || 0) / 100
+
+  if (method === 'PRICE') {
+    let parcela = 0
+    if (monthlyRate === 0) {
+      parcela = financedPrincipal / term
+    } else {
+      const factor = Math.pow(1 + monthlyRate, term)
+      parcela = (financedPrincipal * (monthlyRate * factor)) / (factor - 1)
+    }
+
+    let saldo = financedPrincipal
+    for (let m = 1; m <= paymentsMade; m++) {
+      // 1. Corrigir saldo pela TR/índice de correção mensal
+      saldo = saldo * (1 + correcaoTaxa)
+      // 2. Calcular juros sobre saldo corrigido
+      const juros = saldo * monthlyRate
+      // 3. Amortização = parcela - juros
+      const amortizacao = parcela - juros
+      // 4. Novo saldo = saldo - amortizacao
+      saldo = saldo - amortizacao
+      if (saldo < 0) {
+        saldo = 0
+        break
+      }
+    }
+    return Math.max(0, saldo)
+  }
+
+  // SAC
+  const baseAmortizacao = financedPrincipal / term
+  let saldo = financedPrincipal
+  for (let m = 1; m <= paymentsMade; m++) {
+    // 1. Corrigir saldo pela TR/índice de correção mensal
+    saldo = saldo * (1 + correcaoTaxa)
+    // 2. Amortização base no SAC
+    saldo = saldo - baseAmortizacao
+    if (saldo < 0) {
+      saldo = 0
+      break
+    }
+  }
+  return Math.max(0, saldo)
 }
