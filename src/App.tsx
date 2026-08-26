@@ -12,6 +12,7 @@ import RecuperarSenha from '@/pages/RecuperarSenha'
 import Dashboard from '@/pages/Dashboard'
 import NovaAnalise from '@/pages/NovaAnalise'
 import OportunidadeDetalhe from '@/pages/OportunidadeDetalhe'
+import ChecklistOportunidade from '@/pages/ChecklistOportunidade'
 import Lancamentos from '@/pages/Lancamentos'
 import Historico from '@/pages/Historico'
 import NotFound from '@/pages/NotFound'
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/nova-analise" element={<NovaAnalise />} />
             <Route path="/nova-analise/:id" element={<NovaAnalise />} />
             <Route path="/oportunidade/:id" element={<OportunidadeDetalhe />} />
+            <Route path="/oportunidade/:id/checklist" element={<ChecklistOportunidade />} />
             <Route path="/lancamentos" element={<Lancamentos />} />
             <Route path="/historico" element={<Historico />} />
           </Route>

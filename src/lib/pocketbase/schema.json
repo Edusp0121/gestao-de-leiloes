@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-25T20:20:19.749Z",
+  "generatedAt": "2026-08-26T19:08:27.322Z",
   "collections": [
     {
       "name": "users",
@@ -507,6 +507,191 @@
         "CREATE INDEX idx_lancamentos_oportunidade ON lancamentos (oportunidade)",
         "CREATE INDEX idx_lancamentos_data ON lancamentos (data)"
       ]
+    },
+    {
+      "name": "checklists",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes = @request.auth.id || oportunidade.observadores = @request.auth.id || @request.auth.admin = true)",
+        "view": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes = @request.auth.id || oportunidade.observadores = @request.auth.id || @request.auth.admin = true)",
+        "create": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes = @request.auth.id || @request.auth.admin = true)",
+        "update": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes = @request.auth.id || @request.auth.admin = true)",
+        "delete": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || @request.auth.admin = true)"
+      },
+      "fields": [
+        {
+          "name": "oportunidade",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "oportunidades"
+        },
+        {
+          "name": "data_arremate",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_pagamento_lance",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_pagamento_leiloeiro",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_auto_arrematacao",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_carta_arrematacao",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_pagamento_itbi",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_pagamento_escritura",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_pagamento_registro_averbacao",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_alteracao_dados_prefeitura",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_alteracao_dados_condominio",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_inicio_pagamento_condominio",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_inicio_pagamento_iptu",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_notificacao_ocupante",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_contato_ocupante",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_processo_imissao_posse",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_inicio_reforma",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_termino_reforma",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_divulgacao_venda",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_contrato_compra_venda",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_recebimento_sinal",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_pagamento_financiamento",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_recebimento_saldo",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "desocupacao_amigavel",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ocupante_interesse_compra",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "observacoes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_checklists_oportunidade ON checklists (oportunidade)"]
     }
   ]
 }

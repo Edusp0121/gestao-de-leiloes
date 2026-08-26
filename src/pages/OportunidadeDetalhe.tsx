@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Download, ArrowLeft, Trash2, Award, Eye } from 'lucide-react'
+import { Download, ArrowLeft, Trash2, Award, Eye, CalendarCheck } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -441,6 +441,11 @@ export default function OportunidadeDetalhe() {
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Link to={`/oportunidade/${op.id}/checklist`}>
+            <Button className="bg-[#F97316] hover:bg-[#EA580C] text-white shadow-sm gap-2">
+              <CalendarCheck className="w-4 h-4" /> Checklist Pós-Arrematação
+            </Button>
+          </Link>
           {relatorioUrl && (
             <a href={relatorioUrl} target="_blank" rel="noreferrer">
               <Button
