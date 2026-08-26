@@ -19,6 +19,7 @@ import {
 import { Plus, Pencil } from 'lucide-react'
 import { createLancamento, updateLancamento, Lancamento } from '@/services/lancamentos'
 import { getOportunidade, getUsuarios, toIdArray, type UserRef } from '@/services/oportunidades'
+import { autoFillChecklist } from '@/services/checklist-automation'
 import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
 import { CATEGORY_DESCRIPTIONS } from '@/lib/expense-categories'
@@ -238,10 +239,12 @@ export function LancamentoFormModal({
         quem_pagou: tipo === 'Despesa' ? quemPagou || undefined : undefined,
       }
       if (editLancamento) {
-        await updateLancamento(editLancamento.id, payload)
+        const updated = await updateLancamento(editLancamento.id, payload)
+        await autoFillChecklist(oportunidadeId, updated)
         toast({ title: 'Sucesso', description: 'Lançamento atualizado com sucesso!' })
       } else {
-        await createLancamento(payload)
+        const created = await createLancamento(payload)
+        await autoFillChecklist(oportunidadeId, created)
         toast({ title: 'Sucesso', description: 'Lançamento registrado com sucesso!' })
       }
       setOpen(false)
