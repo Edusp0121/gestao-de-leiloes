@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T20:20:09.756Z",
+  "generatedAt": "2026-08-28T13:32:50.229Z",
   "collections": [
     {
       "name": "users",
@@ -689,6 +689,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "email_notificado",
+          "type": "bool",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE UNIQUE INDEX idx_checklists_oportunidade ON checklists (oportunidade)"]

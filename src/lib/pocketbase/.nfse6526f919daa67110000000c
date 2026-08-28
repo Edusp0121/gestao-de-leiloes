@@ -1,0 +1,746 @@
+{
+  "generatedAt": "2026-08-28T13:21:26.271Z",
+  "collections": [
+    {
+      "name": "users",
+      "type": "auth",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "",
+        "update": "id = @request.auth.id",
+        "delete": "id = @request.auth.id"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "avatar",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        },
+        {
+          "name": "admin",
+          "type": "bool",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_tokenKey__pb_users_auth_` ON `users` (`tokenKey`)",
+        "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''"
+      ]
+    },
+    {
+      "name": "oportunidades",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != '' && (usuario = @request.auth.id || @request.auth.admin = true)"
+      },
+      "fields": [
+        {
+          "name": "usuario",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "nome",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "endereco",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "tipo_leilao",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Judicial",
+            "Extrajudicial"
+          ]
+        },
+        {
+          "name": "banco_selecionado",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_aquisicao",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Em análise",
+            "Arrematada",
+            "Em andamento",
+            "Vendida"
+          ]
+        },
+        {
+          "name": "valor_arrematacao",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_mercado",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "desagio_venda",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tempo_estimado_venda_meses",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "indice_correcao_medio_mensal",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "itbi_percent",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "comissao_leiloeiro_percent",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "comissao_corretor_percent",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "escritura",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "registro",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "averbacao",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "reforma_prevista",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "assessoria_juridica",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "condominio_iptu_mensal",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "modalidade_financiamento",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "À Vista",
+            "SAC",
+            "PRICE"
+          ]
+        },
+        {
+          "name": "banco_responsavel_financiamento",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "taxa_juros_financiamento",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "aliquota_reajuste",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_parcela_mensal",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "saldo_devedor",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "parcelas_pagas",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "capital_necessario",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ganho_capital_base",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ir_percent",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ir_valor",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_venda_com_desconto",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "maior_lucro_esperado",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "retorno_estimado",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "roi_esperado_periodo",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "roi_esperado_anualizado",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "lance_teto",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "relatorio_viabilidade",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        },
+        {
+          "name": "prazo_financiamento",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "percentual_entrada",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "taxa_avaliacao",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "taxas_judiciais",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "acordo_desocupacao",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "baixa_gravames",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "foro",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "incluir_ir_despesas",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "custos_estimados_planilha",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_prefeitura_venal",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "uf",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "participantes",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "observadores",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "dividas_condominio",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "dividas_iptu",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "indice_correcao",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "IPCA",
+            "TR",
+            "IGPM",
+            "INPC",
+            "Manual"
+          ]
+        },
+        {
+          "name": "correcao_saldo_manual",
+          "type": "number",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_oportunidades_usuario ON oportunidades (usuario)",
+        "CREATE INDEX idx_oportunidades_status ON oportunidades (status)"
+      ]
+    },
+    {
+      "name": "lancamentos",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && (usuario = @request.auth.id || oportunidade.participantes = @request.auth.id || oportunidade.observadores = @request.auth.id || @request.auth.admin = true)",
+        "view": "@request.auth.id != '' && (usuario = @request.auth.id || oportunidade.participantes = @request.auth.id || oportunidade.observadores = @request.auth.id || @request.auth.admin = true)",
+        "create": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes = @request.auth.id || @request.auth.admin = true)",
+        "update": "@request.auth.id != '' && (usuario = @request.auth.id || oportunidade.usuario = @request.auth.id || @request.auth.admin = true)",
+        "delete": "@request.auth.id != '' && (usuario = @request.auth.id || oportunidade.usuario = @request.auth.id || @request.auth.admin = true)"
+      },
+      "fields": [
+        {
+          "name": "usuario",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "oportunidade",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "oportunidades"
+        },
+        {
+          "name": "tipo",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "Despesa",
+            "Receita"
+          ]
+        },
+        {
+          "name": "descricao",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "valor",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "data",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        },
+        {
+          "name": "categoria",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Aquisição",
+            "Tributos",
+            "Desocupação",
+            "Mensais",
+            "Venda"
+          ]
+        },
+        {
+          "name": "quem_pagou",
+          "type": "text",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_lancamentos_usuario ON lancamentos (usuario)",
+        "CREATE INDEX idx_lancamentos_oportunidade ON lancamentos (oportunidade)",
+        "CREATE INDEX idx_lancamentos_data ON lancamentos (data)"
+      ]
+    },
+    {
+      "name": "checklists",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes = @request.auth.id || oportunidade.observadores = @request.auth.id || @request.auth.admin = true)",
+        "view": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes = @request.auth.id || oportunidade.observadores = @request.auth.id || @request.auth.admin = true)",
+        "create": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes = @request.auth.id || @request.auth.admin = true)",
+        "update": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes = @request.auth.id || @request.auth.admin = true)",
+        "delete": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || @request.auth.admin = true)"
+      },
+      "fields": [
+        {
+          "name": "oportunidade",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "oportunidades"
+        },
+        {
+          "name": "data_arremate",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_pagamento_lance",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_pagamento_leiloeiro",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_auto_arrematacao",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_carta_arrematacao",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_pagamento_itbi",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_pagamento_escritura",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_pagamento_registro_averbacao",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_alteracao_dados_prefeitura",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_alteracao_dados_condominio",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_inicio_pagamento_condominio",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_inicio_pagamento_iptu",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_notificacao_ocupante",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_contato_ocupante",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_processo_imissao_posse",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_inicio_reforma",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_termino_reforma",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_divulgacao_venda",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_contrato_compra_venda",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_recebimento_sinal",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_pagamento_financiamento",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_recebimento_saldo",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "desocupacao_amigavel",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ocupante_interesse_compra",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "observacoes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_checklists_oportunidade ON checklists (oportunidade)"
+      ]
+    }
+  ]
+}

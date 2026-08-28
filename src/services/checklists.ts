@@ -48,6 +48,7 @@ export interface Checklist extends ChecklistDates, ChecklistToggles {
   id: string
   oportunidade: string
   observacoes?: string
+  email_notificado?: boolean
   created: string
   updated: string
   expand?: {
