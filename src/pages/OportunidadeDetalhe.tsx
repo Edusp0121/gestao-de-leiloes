@@ -368,13 +368,13 @@ export default function OportunidadeDetalhe() {
   )
   const retornoEstimadoExibido = Math.round(retornoEstimadoCalculado * 100) / 100
 
-  // Investimento Total Estimado = max(despesas reais, despesas estimadas) + comissão + saldo devedor
-  const investimentoTotalEstimado = calcInvestimentoTotalEstimado(
+  // Despesas Estimadas = max(despesas reais, despesas estimadas) -> Divisor do ROI Estimado
+  const despesasEstimadasDivisor = calcInvestimentoTotalEstimado(
     { ...op, saldo_devedor: calculatedSaldoDevedor },
     totalDespesasReais,
   )
-  // ROI Estimado = (Retorno Estimado / Investimento Total Estimado) × 100
-  const roiEstimado = calcRoi(retornoEstimadoExibido, investimentoTotalEstimado)
+  // ROI Estimado = (Retorno Estimado / Despesas Estimadas) × 100
+  const roiEstimado = calcRoi(retornoEstimadoExibido, despesasEstimadasDivisor)
 
   // Retorno Real:
   // Retorno Real = Valor de Venda − (Despesas Reais + Comissão de Venda + Saldo Devedor)
@@ -386,14 +386,14 @@ export default function OportunidadeDetalhe() {
   )
   const retornoRealExibido = Math.round(retornoRealCalculado * 100) / 100
 
-  // Investimento Total Real = despesas reais + comissão de venda + saldo devedor
-  const investimentoTotalReal = calcInvestimentoTotalReal(
+  // Despesas Reais = soma dos lançamentos de despesa -> Divisor do ROI Real
+  const despesasReaisDivisor = calcInvestimentoTotalReal(
     { ...op, saldo_devedor: calculatedSaldoDevedor },
     totalDespesasReais,
     temVendaReal ? valorVendaRealLancado : undefined,
   )
-  // ROI Real = (Retorno Real / Investimento Total Real) × 100
-  const roiReal = calcRoi(retornoRealExibido, investimentoTotalReal)
+  // ROI Real = (Retorno Real / Despesas Reais) × 100
+  const roiReal = calcRoi(retornoRealExibido, despesasReaisDivisor)
 
   // Cálculos de datas e ROI anualizado
   // Data inicial = data_arremate do checklist (ou fallback para data_aquisicao da oportunidade)
@@ -580,7 +580,7 @@ export default function OportunidadeDetalhe() {
               </div>
             </div>
             <p className="text-[11px] text-[#7A6A5A] pt-1">
-              Sobre investimento total estimado ({formatBRL(investimentoTotalEstimado)})
+              Sobre despesas estimadas ({formatBRL(despesasEstimadasDivisor)})
             </p>
           </CardContent>
         </Card>
@@ -615,8 +615,8 @@ export default function OportunidadeDetalhe() {
             </div>
             <p className="text-[11px] text-[#7A6A5A] pt-1">
               {temVendaReal
-                ? `Venda Real (${formatBRL(valorVendaRealLancado)}) − Investimento (${formatBRL(investimentoTotalReal)})`
-                : `Venda Estimada (${formatBRL(op.valor_venda_com_desconto || op.valor_mercado)}) − Investimento (${formatBRL(investimentoTotalReal)})`}
+                ? `Venda Real (${formatBRL(valorVendaRealLancado)}) − Despesas (${formatBRL(despesasReaisDivisor)})`
+                : `Venda Estimada (${formatBRL(op.valor_venda_com_desconto || op.valor_mercado)}) − Despesas (${formatBRL(despesasReaisDivisor)})`}
             </p>
           </CardContent>
         </Card>

@@ -316,8 +316,11 @@ export function calcRetornoReal(
 }
 
 /**
- * Investimento Total Estimado:
- *   Investimento Total = max(despesas reais, despesas estimadas) + comissão de venda + saldo devedor
+ * Despesas Totais Estimadas (divisor do ROI Estimado):
+ *   Divisor = max(despesas reais, despesas estimadas)
+ *
+ * Observação: Comissão de venda e Saldo Devedor NÃO entram no divisor do ROI;
+ * entram apenas no cálculo do Retorno (subtraindo da venda).
  */
 export function calcInvestimentoTotalEstimado(
   op: {
@@ -336,25 +339,19 @@ export function calcInvestimentoTotalEstimado(
   },
   despesasReais: number = 0,
 ): number {
-  const valorVenda = toNum(op.valor_venda_com_desconto) || toNum(op.valor_mercado)
-  const comissaoPercent =
-    op.comissao_corretor_percent != null && op.comissao_corretor_percent !== ''
-      ? toNum(op.comissao_corretor_percent)
-      : 6
-  const comissaoVenda = (comissaoPercent / 100) * valorVenda
   const despesas = Math.max(despesasReais || 0, calcTotalDespesasEstimadas(op))
-  const saldoDevedor = calcSaldoDevedorFinanciamento(op)
-
-  const investimentoTotal = despesas + comissaoVenda + saldoDevedor
-  return Math.round(investimentoTotal * 100) / 100
+  return Math.round(despesas * 100) / 100
 }
 
 /**
- * Investimento Total Real:
- *   Investimento Total = despesas reais + comissão de venda + saldo devedor
+ * Despesas Totais Reais (divisor do ROI Real):
+ *   Divisor = despesas reais
+ *
+ * Observação: Comissão de venda e Saldo Devedor NÃO entram no divisor do ROI;
+ * entram apenas no cálculo do Retorno (subtraindo da venda).
  */
 export function calcInvestimentoTotalReal(
-  op: {
+  _op?: {
     valor_venda_com_desconto?: number | string | null
     valor_mercado?: number | string | null
     comissao_corretor_percent?: number | string | null
@@ -368,30 +365,21 @@ export function calcInvestimentoTotalReal(
     indice_correcao_medio_mensal?: number | string | null
   },
   despesasReais: number = 0,
-  vendaReal?: number,
+  _vendaReal?: number,
 ): number {
-  const valorVendaEstimado = toNum(op.valor_venda_com_desconto) || toNum(op.valor_mercado)
-  const valorVenda = vendaReal !== undefined && vendaReal > 0 ? vendaReal : valorVendaEstimado
-  const comissaoPercent =
-    op.comissao_corretor_percent != null && op.comissao_corretor_percent !== ''
-      ? toNum(op.comissao_corretor_percent)
-      : 6
-  const comissaoVenda = (comissaoPercent / 100) * valorVenda
-  const saldoDevedor = calcSaldoDevedorFinanciamento(op)
-
-  const investimentoTotal = toNum(despesasReais) + comissaoVenda + saldoDevedor
-  return Math.round(investimentoTotal * 100) / 100
+  const despesas = toNum(despesasReais)
+  return Math.round(despesas * 100) / 100
 }
 
 /**
- * ROI = (Retorno / Investimento Total) × 100
+ * ROI = (Retorno / Despesas) × 100
+ * ROI no período = (Retorno / Despesas) × 100
+ *
+ * Se despesas <= 0 ou inválido, retorna null (exibido como "—").
  */
-/**
- * ROI no período = (Retorno / Investimento Total) × 100
- */
-export function calcRoi(retorno: number, investimentoTotal: number): number | null {
-  if (!investimentoTotal || investimentoTotal <= 0) return null
-  const roi = (retorno / investimentoTotal) * 100
+export function calcRoi(retorno: number, despesas: number): number | null {
+  if (!despesas || despesas <= 0 || !Number.isFinite(despesas)) return null
+  const roi = (retorno / despesas) * 100
   return Number.isFinite(roi) ? Math.round(roi * 100) / 100 : null
 }
 
