@@ -384,74 +384,35 @@ export function calcRoi(retorno: number, despesas: number): number | null {
 }
 
 /**
- * ROI anualizado composto:
- *   ROI Anual = ((1 + ROI_período)^(1/anos) − 1) × 100
- * onde:
- * - roiPeriodoPercent é o ROI no período em porcentagem (ex: 50 para 50%)
- * - anos é o tempo de posse em anos (dias / 365)
+ * ROI anual com projeção linear sobre o tempo estimado de venda:
+ *   ROI Anual = ROI do período × (12 ÷ tempo_estimado_venda_meses)
  *
- * Retorna null se não houver período válido (anos <= 0), se roiPeriodoPercent for nulo,
- * ou se a base (1 + ROI_período) for <= 0.
+ * Retorna null (exibido como "—") se:
+ * - roiPeriodoPercent for nulo, undefined ou inválido
+ * - tempoEstimadoMeses for nulo, undefined, inválido ou <= 0
  */
 export function calcRoiAnual(
   roiPeriodoPercent: number | null | undefined,
-  anos: number | null | undefined,
+  tempoEstimadoMeses: number | null | undefined,
 ): number | null {
+  const meses =
+    typeof tempoEstimadoMeses === 'string'
+      ? parseFloat(tempoEstimadoMeses)
+      : Number(tempoEstimadoMeses)
   if (
     roiPeriodoPercent === null ||
     roiPeriodoPercent === undefined ||
     !Number.isFinite(roiPeriodoPercent) ||
-    anos === null ||
-    anos === undefined ||
-    !Number.isFinite(anos) ||
-    anos <= 0
+    tempoEstimadoMeses === null ||
+    tempoEstimadoMeses === undefined ||
+    !Number.isFinite(meses) ||
+    meses <= 0
   ) {
     return null
   }
 
-  const roiDecimal = roiPeriodoPercent / 100
-  const base = 1 + roiDecimal
-  if (base <= 0) return null
-
-  const anualDecimal = Math.pow(base, 1 / anos) - 1
-  if (!Number.isFinite(anualDecimal)) return null
-
-  const anualPercent = anualDecimal * 100
-  return Math.round(anualPercent * 100) / 100
-}
-
-/**
- * Calcula o tempo decorrido em anos entre duas datas.
- * Se dataInicio for nula ou inválida, retorna null.
- * Se dataFim não for fornecida, utiliza a data atual.
- * Se a diferença em dias for <= 0, retorna 0 ou null.
- */
-export function calcAnosEntreDatas(
-  dataInicioStr?: string | null,
-  dataFimStr?: string | null,
-): number | null {
-  if (!dataInicioStr) return null
-  try {
-    const dInicio = new Date(dataInicioStr.slice(0, 10) + 'T00:00:00')
-    if (isNaN(dInicio.getTime())) return null
-
-    let dFim: Date
-    if (dataFimStr) {
-      dFim = new Date(dataFimStr.slice(0, 10) + 'T00:00:00')
-      if (isNaN(dFim.getTime())) {
-        dFim = new Date()
-      }
-    } else {
-      dFim = new Date()
-    }
-
-    const diffMs = dFim.getTime() - dInicio.getTime()
-    const diffDias = diffMs / (1000 * 60 * 60 * 24)
-    if (diffDias <= 0) return 0
-    return diffDias / 365
-  } catch {
-    return null
-  }
+  const roiAnual = roiPeriodoPercent * (12 / meses)
+  return Number.isFinite(roiAnual) ? Math.round(roiAnual * 10) / 10 : null
 }
 
 export function calcTotalInvestido(

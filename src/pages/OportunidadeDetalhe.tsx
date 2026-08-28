@@ -56,7 +56,6 @@ import {
   calcInvestimentoTotalReal,
   calcRoi,
   calcRoiAnual,
-  calcAnosEntreDatas,
 } from '@/lib/calculator-utils'
 import { primeiraLetraNome, sociosCobertosPorMarca } from '@/lib/participantes-utils'
 import { Badge } from '@/components/ui/badge'
@@ -395,28 +394,11 @@ export default function OportunidadeDetalhe() {
   // ROI Real = (Retorno Real / Despesas Reais) × 100
   const roiReal = calcRoi(retornoRealExibido, despesasReaisDivisor)
 
-  // Cálculos de datas e ROI anualizado
-  // Data inicial = data_arremate do checklist (ou fallback para data_aquisicao da oportunidade)
-  const dataArremate = checklist?.data_arremate || op.data_aquisicao || null
-
-  // Data do lançamento real de venda (se houver)
-  const lancamentoVenda = lancamentos.find((l) => {
-    if (l.tipo !== 'Receita') return false
-    const desc = (l.descricao || '').toLowerCase().trim()
-    const cat = (l.categoria || '').toLowerCase().trim()
-    return desc === 'venda' || desc === 'venda do imóvel' || (cat === 'venda' && desc !== 'locação')
-  })
-  const dataVendaReal = lancamentoVenda?.data || null
-
-  // Período em anos para Estimado e Real:
-  // - Retorno Real: data do lançamento real de venda se existir; senão data de hoje.
-  // - Retorno Estimado: data de hoje (ou data do lançamento real se existir).
-  const anosEstimado = calcAnosEntreDatas(dataArremate, dataVendaReal || undefined)
-  const anosReal = calcAnosEntreDatas(dataArremate, dataVendaReal || undefined)
-
-  // ROI anual composto: ((1 + ROI_período)^(1/anos) - 1) * 100
-  const roiAnualEstimado = calcRoiAnual(roiEstimado, anosEstimado)
-  const roiAnualReal = calcRoiAnual(roiReal, anosReal)
+  // ROI anual: Projeção linear sobre o tempo estimado de venda (ROI período × 12 / tempo_estimado_venda_meses)
+  // Se o campo estiver vazio ou <= 0, retorna null (exibido como "—").
+  const tempoEstimadoMeses = op.tempo_estimado_venda_meses
+  const roiAnualEstimado = calcRoiAnual(roiEstimado, tempoEstimadoMeses)
+  const roiAnualReal = calcRoiAnual(roiReal, tempoEstimadoMeses)
 
   // Total Investido (Previsto): apenas o capital necessário estimado das
   // categorias (sem saldo devedor remanescente).
