@@ -50,6 +50,10 @@ import {
   calcRetornoDinamico,
   calcRetornoReal,
   calcCapitalNecessario,
+  getValorVendaReal,
+  calcInvestimentoTotalEstimado,
+  calcInvestimentoTotalReal,
+  calcRoi,
 } from '@/lib/calculator-utils'
 import { primeiraLetraNome, sociosCobertosPorMarca } from '@/lib/participantes-utils'
 import { Badge } from '@/components/ui/badge'
@@ -346,47 +350,52 @@ export default function OportunidadeDetalhe() {
     .filter((l) => l.tipo === 'Despesa')
     .reduce((acc, l) => acc + l.valor, 0)
 
+  // Valor Real de Venda lançado nos registros
+  const valorVendaRealLancado = getValorVendaReal(lancamentos)
+  const temVendaReal = valorVendaRealLancado > 0
+
   // Retorno Estimado Dinâmico:
-  // Usa o máximo entre as despesas reais já lançadas e o total de despesas estimadas,
-  // mantendo o saldo devedor atual do financiamento (calculatedSaldoDevedor).
+  // Retorno Estimado = Venda − (max(despesas reais, estimadas) + comissão + saldo devedor)
   const retornoEstimadoCalculado = calcRetornoDinamico(
     { ...op, saldo_devedor: calculatedSaldoDevedor },
     totalDespesasReais,
   )
   const retornoEstimadoExibido = Math.round(retornoEstimadoCalculado * 100) / 100
 
-  // Retorno Real:
-  // Retorno Real = Valor de Venda − (Despesas Reais + Comissão de Venda + Saldo Devedor)
-  const retornoRealCalculado = calcRetornoReal(
+  // Investimento Total Estimado = max(despesas reais, despesas estimadas) + comissão + saldo devedor
+  const investimentoTotalEstimado = calcInvestimentoTotalEstimado(
     { ...op, saldo_devedor: calculatedSaldoDevedor },
     totalDespesasReais,
   )
+  // ROI Estimado = (Retorno Estimado / Investimento Total Estimado) × 100
+  const roiEstimado = calcRoi(retornoEstimadoExibido, investimentoTotalEstimado)
+
+  // Retorno Real:
+  // Retorno Real = Valor de Venda − (Despesas Reais + Comissão de Venda + Saldo Devedor)
+  // Onde Valor de Venda usa o valor real quando houver lançamento real, senão o estimado.
+  const retornoRealCalculado = calcRetornoReal(
+    { ...op, saldo_devedor: calculatedSaldoDevedor },
+    totalDespesasReais,
+    temVendaReal ? valorVendaRealLancado : undefined,
+  )
   const retornoRealExibido = Math.round(retornoRealCalculado * 100) / 100
 
-  const temReceitaVenda = lancamentos.some(
-    (l) => l.tipo === 'Receita' && isVendaReceita(l.descricao),
+  // Investimento Total Real = despesas reais + comissão de venda + saldo devedor
+  const investimentoTotalReal = calcInvestimentoTotalReal(
+    { ...op, saldo_devedor: calculatedSaldoDevedor },
+    totalDespesasReais,
+    temVendaReal ? valorVendaRealLancado : undefined,
   )
+  // ROI Real = (Retorno Real / Investimento Total Real) × 100
+  const roiReal = calcRoi(retornoRealExibido, investimentoTotalReal)
 
   // Total Investido (Previsto): apenas o capital necessário estimado das
-  // categorias (sem saldo devedor remanescente). Corretagem e IR são custos de venda
-  // e continuam sendo considerados nos cards de Retorno Estimado e ROI, não aqui.
-  // O "Previsto" é o espelho do "Real", porém com estimativas das categorias.
+  // categorias (sem saldo devedor remanescente).
   const totalInvestidoPrevisto = (() => {
     const opComSaldo = { ...op, saldo_devedor: calculatedSaldoDevedor }
     const capital = calcCapitalNecessario(opComSaldo as any)
     return Math.round(capital * 100) / 100
   })()
-
-  // ROI dinâmico: calculado a partir do retorno estimado e do valor investido
-  // (Real se houver lançamentos, senão Previsto). Atualiza automaticamente à
-  // medida que lançamentos são adicionados — diferente dos campos estáticos
-  // `roi_esperado_periodo` / `roi_esperado_anualizado` salvos na análise.
-  const valorInvestidoRoi = totalInvestidoReal > 0 ? totalInvestidoReal : totalInvestidoPrevisto
-  const tempoVendaMeses = toNum(op.tempo_estimado_venda_meses)
-  const roiPeriodo =
-    valorInvestidoRoi > 0 ? (retornoEstimadoExibido / valorInvestidoRoi) * 100 : null
-  const roiAnualizado =
-    roiPeriodo !== null && tempoVendaMeses > 0 ? roiPeriodo / (tempoVendaMeses / 12) : null
 
   return (
     <div className="space-y-6">
@@ -518,35 +527,45 @@ export default function OportunidadeDetalhe() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Card className="bg-white border-[#EDE4D8]">
           <CardContent className="pt-4">
             <p className="text-xs text-[#7A6A5A] uppercase font-semibold">Retorno Estimado</p>
             <p className="text-xl font-bold text-[#16A34A] mt-1">
               {formatBRL(retornoEstimadoExibido)}
             </p>
-            <p className="text-xs text-green-700 mt-0.5">
-              {temReceitaVenda ? 'Lucro realizado' : 'Cálculo dinâmico'}
+            <div className="mt-2 pt-2 border-t border-[#EDE4D8]/60 flex items-center justify-between">
+              <span className="text-xs text-[#7A6A5A] font-medium">ROI Estimado:</span>
+              <span className="text-sm font-bold text-[#F97316]">
+                {roiEstimado !== null ? formatPercent(roiEstimado) : '—'}
+              </span>
+            </div>
+            <p className="text-[11px] text-[#7A6A5A] mt-0.5">
+              Sobre investimento total estimado ({formatBRL(investimentoTotalEstimado)})
             </p>
           </CardContent>
         </Card>
         <Card className="bg-white border-[#EDE4D8]">
           <CardContent className="pt-4">
-            <p className="text-xs text-[#7A6A5A] uppercase font-semibold">Retorno Real</p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-[#7A6A5A] uppercase font-semibold">Retorno Real</p>
+              {temVendaReal && (
+                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded">
+                  Venda real lançada
+                </span>
+              )}
+            </div>
             <p className="text-xl font-bold text-[#16A34A] mt-1">{formatBRL(retornoRealExibido)}</p>
-            <p className="text-xs text-emerald-700 mt-0.5">
-              Venda − (Despesas Reais + Comissão + Saldo Devedor)
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="bg-white border-[#EDE4D8]">
-          <CardContent className="pt-4">
-            <p className="text-xs text-[#7A6A5A] uppercase font-semibold">ROI no Período / Anual</p>
-            <p className="text-xl font-bold text-[#F97316] mt-1">
-              {roiPeriodo !== null ? formatPercent(roiPeriodo) : '—'}
-            </p>
-            <p className="text-xs text-[#8B5A2B] mt-0.5">
-              Anualizado: {roiAnualizado !== null ? formatPercent(roiAnualizado) : '—'}
+            <div className="mt-2 pt-2 border-t border-[#EDE4D8]/60 flex items-center justify-between">
+              <span className="text-xs text-[#7A6A5A] font-medium">ROI Real:</span>
+              <span className="text-sm font-bold text-[#F97316]">
+                {roiReal !== null ? formatPercent(roiReal) : '—'}
+              </span>
+            </div>
+            <p className="text-[11px] text-[#7A6A5A] mt-0.5">
+              {temVendaReal
+                ? `Venda Real (${formatBRL(valorVendaRealLancado)}) − Investimento (${formatBRL(investimentoTotalReal)})`
+                : `Venda Estimada (${formatBRL(op.valor_venda_com_desconto || op.valor_mercado)}) − Investimento (${formatBRL(investimentoTotalReal)})`}
             </p>
           </CardContent>
         </Card>
