@@ -14,6 +14,8 @@ import {
   Eye,
   ListTodo,
   TrendingUp,
+  Printer,
+  FileText,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -298,6 +300,10 @@ export default function ChecklistOportunidade() {
     }
   }, [formData])
 
+  const handleExportPDF = () => {
+    window.print()
+  }
+
   const formatDateDisplay = (dateStr: string) => {
     if (!dateStr) return '-'
     const [y, m, d] = dateStr.slice(0, 10).split('-')
@@ -342,7 +348,17 @@ export default function ChecklistOportunidade() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 print:hidden">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleExportPDF}
+            className="border-[#EDE4D8] text-[#5C3A21] hover:bg-[#FAF6F0] shadow-sm gap-2"
+          >
+            <Printer className="w-4 h-4 text-[#F97316]" />
+            Exportar PDF
+          </Button>
+
           {!isObserver ? (
             <Button
               onClick={() => handleSave()}
@@ -357,6 +373,43 @@ export default function ChecklistOportunidade() {
               <Eye className="w-4 h-4" /> Modo observador (somente leitura)
             </span>
           )}
+        </div>
+      </div>
+
+      {/* Cabeçalho exclusivo para impressão / PDF */}
+      <div className="hidden print:block border-b-2 border-[#5C3A21] pb-4 mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-[#5C3A21] text-white flex items-center justify-center font-bold text-lg">
+              3
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-[#5C3A21] tracking-tight">
+                Dou-lhe Tres Assessoria
+              </h2>
+              <p className="text-xs text-[#7A6A5A]">
+                Gestão de Leilões Imobiliários • Relatório de Checklist
+              </p>
+            </div>
+          </div>
+          <div className="text-right text-xs text-[#7A6A5A]">
+            <p className="font-semibold text-[#5C3A21]">Data de Emissão</p>
+            <p>{new Date().toLocaleDateString('pt-BR')}</p>
+          </div>
+        </div>
+        <div className="mt-4 pt-3 border-t border-dashed border-[#EDE4D8] flex justify-between text-sm">
+          <div>
+            <p className="font-bold text-[#5C3A21] text-base">{op.nome}</p>
+            <p className="text-xs text-[#7A6A5A]">{op.endereco}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs font-semibold text-[#5C3A21]">
+              Progresso Geral: {progressStats.percent}%
+            </p>
+            <p className="text-xs text-[#16A34A]">
+              {progressStats.completed} de {progressStats.total} etapas concluídas
+            </p>
+          </div>
         </div>
       </div>
 
@@ -503,12 +556,16 @@ export default function ChecklistOportunidade() {
                                     value={dateValue}
                                     disabled={isObserver}
                                     onChange={(e) => handleDateChange(item.key, e.target.value)}
-                                    className={`w-40 sm:w-44 h-9 text-xs sm:text-sm font-medium ${
+                                    className={`w-40 sm:w-44 h-9 text-xs sm:text-sm font-medium print:hidden ${
                                       hasDate
                                         ? 'border-[#16A34A] text-[#166534] bg-white font-semibold'
                                         : 'border-[#EDE4D8] text-[#5C3A21]'
                                     }`}
                                   />
+                                  {/* Exibição em texto limpo na impressão */}
+                                  <span className="hidden print:inline-block text-xs font-bold px-2 py-1 rounded bg-[#F8FAFC] border border-[#CBD5E1] text-[#2D1B0E]">
+                                    {hasDate ? formatDateDisplay(dateValue) : 'Não preenchido'}
+                                  </span>
                                 </div>
                                 {hasDate && !isObserver && (
                                   <Button
@@ -517,7 +574,7 @@ export default function ChecklistOportunidade() {
                                     size="sm"
                                     title="Limpar data"
                                     onClick={() => handleDateChange(item.key, '')}
-                                    className="h-8 px-2 text-xs text-[#7A6A5A] hover:text-red-600 hover:bg-red-50"
+                                    className="h-8 px-2 text-xs text-[#7A6A5A] hover:text-red-600 hover:bg-red-50 print:hidden"
                                   >
                                     Limpar
                                   </Button>
@@ -556,7 +613,7 @@ export default function ChecklistOportunidade() {
                                     onCheckedChange={(checked) =>
                                       handleToggleChange(item.relatedToggleKey!, checked)
                                     }
-                                    className="data-[state=checked]:bg-[#16A34A]"
+                                    className="data-[state=checked]:bg-[#16A34A] print:hidden"
                                   />
                                 </div>
                               </div>
@@ -588,7 +645,7 @@ export default function ChecklistOportunidade() {
               </div>
 
               {!isObserver && (
-                <div className="pt-2 flex justify-end">
+                <div className="pt-2 flex justify-end print:hidden">
                   <Button
                     onClick={() => handleSave()}
                     disabled={saving}

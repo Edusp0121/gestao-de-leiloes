@@ -288,3 +288,53 @@
     animation: spotlight 2s ease forwards;
   }
 }
+
+@media print {
+  @page {
+    margin: 12mm;
+    size: auto;
+  }
+
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Esconde barras de navegação, sidebars, headers da aplicação e botões interativos */
+  nav,
+  aside,
+  header,
+  .sidebar,
+  [data-sidebar],
+  button,
+  .print\\:hidden {
+    display: none !important;
+  }
+
+  /* Exibe elementos marcados para impressão */
+  .print\\:block {
+    display: block !important;
+  }
+  .print\\:inline-block {
+    display: inline-block !important;
+  }
+  .print\\:flex {
+    display: flex !important;
+  }
+
+  /* Ajusta containers para fluxo de página e evita quebras feias */
+  main,
+  .container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .card,
+  [class*='rounded-lg'] {
+    box-shadow: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
