@@ -1,5 +1,5 @@
 // checklist_notifications.js
-// Hook para disparo de e-mail ao completar 100% dos 22 itens de data do Checklist Pós-Arrematação
+// Hook para disparo de e-mail ao completar 100% dos 23 itens de data do Checklist Pós-Arrematação
 
 onRecordUpdate((e) => {
   const dateFields = [
@@ -18,6 +18,7 @@ onRecordUpdate((e) => {
     'data_notificacao_ocupante',
     'data_contato_ocupante',
     'data_processo_imissao_posse',
+    'data_imissao_posse',
     'data_inicio_reforma',
     'data_termino_reforma',
     'data_divulgacao_venda',
@@ -33,7 +34,7 @@ onRecordUpdate((e) => {
     return e.next()
   }
 
-  // Verifica se todos os 22 campos de data estão preenchidos
+  // Verifica se todos os 23 campos de data estão preenchidos
   let allFilled = true
   for (let i = 0; i < dateFields.length; i++) {
     const val = e.record.get(dateFields[i])
@@ -86,7 +87,7 @@ onRecordUpdate((e) => {
         '<h2 style="color: #5c3a21; font-size: 18px; margin-top: 0;">Parabéns, ' +
         userName +
         '!</h2>' +
-        '<p>Informamos que todas as <strong>22 etapas</strong> do Checklist Pós-Arrematação da oportunidade <strong>' +
+        '<p>Informamos que todas as <strong>23 etapas</strong> do Checklist Pós-Arrematação da oportunidade <strong>' +
         opNome +
         '</strong> foram concluídas com sucesso!</p>' +
         '<div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 16px; margin: 20px 0;">' +

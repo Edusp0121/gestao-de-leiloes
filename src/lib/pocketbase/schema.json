@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-28T18:56:15.473Z",
+  "generatedAt": "2026-08-28T19:15:37.727Z",
   "collections": [
     {
       "name": "users",
@@ -693,6 +693,12 @@
         {
           "name": "email_notificado",
           "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_imissao_posse",
+          "type": "date",
           "required": false,
           "system": false
         }

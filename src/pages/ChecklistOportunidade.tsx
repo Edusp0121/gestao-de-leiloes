@@ -74,6 +74,7 @@ export default function ChecklistOportunidade() {
     data_notificacao_ocupante: '',
     data_contato_ocupante: '',
     data_processo_imissao_posse: '',
+    data_imissao_posse: '',
     data_inicio_reforma: '',
     data_termino_reforma: '',
     data_divulgacao_venda: '',
@@ -144,6 +145,9 @@ export default function ChecklistOportunidade() {
             : '',
           data_processo_imissao_posse: checkData.data_processo_imissao_posse
             ? checkData.data_processo_imissao_posse.slice(0, 10)
+            : '',
+          data_imissao_posse: checkData.data_imissao_posse
+            ? checkData.data_imissao_posse.slice(0, 10)
             : '',
           data_inicio_reforma: checkData.data_inicio_reforma
             ? checkData.data_inicio_reforma.slice(0, 10)
@@ -477,7 +481,7 @@ export default function ChecklistOportunidade() {
                 <div>
                   <CardTitle className="text-lg font-bold text-[#5C3A21] flex items-center gap-2">
                     <ListTodo className="w-5 h-5 text-[#F97316]" />
-                    Preenchimento do Checklist (22 Itens + 2 Decisões)
+                    Preenchimento do Checklist (23 Itens + 2 Decisões)
                   </CardTitle>
                   <CardDescription className="text-xs text-[#7A6A5A]">
                     Insira as datas das etapas concluídas para alimentar a timeline cronológica.
@@ -780,7 +784,7 @@ export default function ChecklistOportunidade() {
 
                 {pendingItems.length === 0 ? (
                   <div className="p-3 bg-[#DCFCE7]/50 rounded-lg text-center text-xs text-[#166534] font-semibold border border-[#86EFAC]">
-                    Parabéns! Todos os 22 marcos do processo pós-arrematação foram registrados.
+                    Parabéns! Todos os 23 marcos do processo pós-arrematação foram registrados.
                   </div>
                 ) : (
                   <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">

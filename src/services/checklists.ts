@@ -30,6 +30,7 @@ export interface ChecklistDates {
   data_notificacao_ocupante?: string | null
   data_contato_ocupante?: string | null
   data_processo_imissao_posse?: string | null
+  data_imissao_posse?: string | null
   data_inicio_reforma?: string | null
   data_termino_reforma?: string | null
   data_divulgacao_venda?: string | null
@@ -62,7 +63,7 @@ export interface Checklist extends ChecklistDates, ChecklistToggles {
 }
 
 /**
- * Definição canônica dos 22 itens do tipo DATA na ordem padrão do processo
+ * Definição canônica dos 23 itens do tipo DATA na ordem padrão do processo
  * e vinculação com os 2 itens SIM/NÃO.
  */
 export const CHECKLIST_ITEMS_CONFIG: ChecklistItemMeta[] = [
@@ -165,17 +166,23 @@ export const CHECKLIST_ITEMS_CONFIG: ChecklistItemMeta[] = [
     categoria: 'Desocupação & Posse',
     description: 'Petição/mandado judicial de imissão na posse (se necessário)',
   },
+  {
+    key: 'data_imissao_posse',
+    label: '16. Imissão na Posse',
+    categoria: 'Desocupação & Posse',
+    description: 'Data em que a posse do imóvel foi efetivamente obtida',
+  },
 
   // Reforma
   {
     key: 'data_inicio_reforma',
-    label: '16. Início Reforma',
+    label: '17. Início Reforma',
     categoria: 'Reforma',
     description: 'Início das obras de reparo/pintura/modernização',
   },
   {
     key: 'data_termino_reforma',
-    label: '17. Término Reforma',
+    label: '18. Término Reforma',
     categoria: 'Reforma',
     description: 'Entrega final da reforma e limpeza pós-obra',
   },
@@ -183,31 +190,31 @@ export const CHECKLIST_ITEMS_CONFIG: ChecklistItemMeta[] = [
   // Venda & Liquidação
   {
     key: 'data_divulgacao_venda',
-    label: '18. Divulgação para Venda',
+    label: '19. Divulgação para Venda',
     categoria: 'Venda & Recebimento',
     description: 'Fotos profissionais e publicação nos portais imobiliários',
   },
   {
     key: 'data_contrato_compra_venda',
-    label: '19. Contrato Compra e Venda',
+    label: '20. Contrato Compra e Venda',
     categoria: 'Venda & Recebimento',
     description: 'Assinatura do compromisso/promessa de compra e venda',
   },
   {
     key: 'data_recebimento_sinal',
-    label: '20. Recebimento de Sinal',
+    label: '21. Recebimento de Sinal',
     categoria: 'Venda & Recebimento',
     description: 'Entrada/arras creditada na conta',
   },
   {
     key: 'data_pagamento_financiamento',
-    label: '21. Pagamento do Financiamento',
+    label: '22. Pagamento do Financiamento',
     categoria: 'Venda & Recebimento',
     description: 'Quitação do saldo devedor do financiamento bancário',
   },
   {
     key: 'data_recebimento_saldo',
-    label: '22. Recebimento do Saldo',
+    label: '23. Recebimento do Saldo',
     categoria: 'Venda & Recebimento',
     description: 'Recebimento final do saldo da venda / repasse do banco',
   },

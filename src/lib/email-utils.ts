@@ -22,7 +22,7 @@ export function generateChecklistCompletionEmailHtml(data: ChecklistEmailData): 
       </div>
       <div style="padding: 24px; background-color: #ffffff;">
         <h2 style="color: #5c3a21; font-size: 18px; margin-top: 0;">Parabéns, ${destinatarioNome}!</h2>
-        <p>Informamos que todas as <strong>22 etapas</strong> do Checklist Pós-Arrematação da oportunidade <strong>${oportunidadeNome}</strong> foram concluídas com sucesso!</p>
+        <p>Informamos que todas as <strong>23 etapas</strong> do Checklist Pós-Arrematação da oportunidade <strong>${oportunidadeNome}</strong> foram concluídas com sucesso!</p>
         ${oportunidadeEndereco ? `<p style="font-size: 13px; color: #7a6a5a; margin-top: -8px;">📍 ${oportunidadeEndereco}</p>` : ''}
         <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 16px; margin: 20px 0;">
           <p style="margin: 0; color: #166534; font-weight: bold;">✔ 100% dos marcos pós-arrematação registrados e finalizados.</p>

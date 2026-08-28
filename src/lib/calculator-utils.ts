@@ -255,6 +255,45 @@ export function calcRetornoDinamico(
   return Math.round(retorno * 100) / 100
 }
 
+/**
+ * Retorno REAL de uma oportunidade:
+ *
+ *   Retorno Real = Valor de Venda − (Despesas Reais + Comissão de Venda + Saldo Devedor)
+ *
+ * Onde:
+ * - Valor de Venda = valor de venda da oportunidade (o mesmo usado no Retorno Estimado)
+ * - Despesas Reais = soma dos lançamentos reais de despesa (sem usar estimativa)
+ * - Comissão de Venda = comissão de venda (comissao_corretor_percent% × valor de venda)
+ * - Saldo Devedor = saldo devedor calculado (o mesmo usado no Retorno Estimado)
+ */
+export function calcRetornoReal(
+  op: {
+    valor_venda_com_desconto?: number | string | null
+    valor_mercado?: number | string | null
+    comissao_corretor_percent?: number | string | null
+    modalidade_financiamento?: 'À Vista' | 'SAC' | 'PRICE' | string
+    valor_arrematacao?: number | string | null
+    taxa_juros_financiamento?: number | string | null
+    prazo_financiamento?: number | string | null
+    parcelas_pagas?: number | string | null
+    percentual_entrada?: number | string | null
+    saldo_devedor?: number | string | null
+    indice_correcao_medio_mensal?: number | string | null
+  },
+  despesasReais: number = 0,
+): number {
+  const valorVenda = toNum(op.valor_venda_com_desconto) || toNum(op.valor_mercado)
+  const comissaoPercent =
+    op.comissao_corretor_percent != null && op.comissao_corretor_percent !== ''
+      ? toNum(op.comissao_corretor_percent)
+      : 6
+  const comissaoVenda = (comissaoPercent / 100) * valorVenda
+  const saldoDevedor = calcSaldoDevedorFinanciamento(op)
+
+  const retorno = valorVenda - (toNum(despesasReais) + comissaoVenda + saldoDevedor)
+  return Math.round(retorno * 100) / 100
+}
+
 export function calcTotalInvestido(
   _op: {
     valor_arrematacao?: number | null

@@ -45,7 +45,12 @@ import {
 } from '@/lib/expense-categories'
 import { Filter, Users } from 'lucide-react'
 import { calculateInstallment, calculateSaldoDevedor, FinancingParams } from '@/lib/financing-utils'
-import { toNum, calcRetornoDinamico, calcCapitalNecessario } from '@/lib/calculator-utils'
+import {
+  toNum,
+  calcRetornoDinamico,
+  calcRetornoReal,
+  calcCapitalNecessario,
+} from '@/lib/calculator-utils'
 import { primeiraLetraNome, sociosCobertosPorMarca } from '@/lib/participantes-utils'
 import { Badge } from '@/components/ui/badge'
 import pb from '@/lib/pocketbase/client'
@@ -350,6 +355,14 @@ export default function OportunidadeDetalhe() {
   )
   const retornoEstimadoExibido = Math.round(retornoEstimadoCalculado * 100) / 100
 
+  // Retorno Real:
+  // Retorno Real = Valor de Venda − (Despesas Reais + Comissão de Venda + Saldo Devedor)
+  const retornoRealCalculado = calcRetornoReal(
+    { ...op, saldo_devedor: calculatedSaldoDevedor },
+    totalDespesasReais,
+  )
+  const retornoRealExibido = Math.round(retornoRealCalculado * 100) / 100
+
   const temReceitaVenda = lancamentos.some(
     (l) => l.tipo === 'Receita' && isVendaReceita(l.descricao),
   )
@@ -508,23 +521,21 @@ export default function OportunidadeDetalhe() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="bg-white border-[#EDE4D8]">
           <CardContent className="pt-4">
-            <p className="text-xs text-[#7A6A5A] uppercase font-semibold">
-              Valor Estimado de Venda
-            </p>
-            <p className="text-xl font-bold text-[#2D1B0E] mt-1">
-              {formatBRL(op.valor_venda_com_desconto || op.valor_mercado)}
-            </p>
-            <p className="text-xs text-gray-500 mt-0.5">Deságio de {op.desagio_venda || 0}%</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-white border-[#EDE4D8]">
-          <CardContent className="pt-4">
             <p className="text-xs text-[#7A6A5A] uppercase font-semibold">Retorno Estimado</p>
             <p className="text-xl font-bold text-[#16A34A] mt-1">
               {formatBRL(retornoEstimadoExibido)}
             </p>
             <p className="text-xs text-green-700 mt-0.5">
               {temReceitaVenda ? 'Lucro realizado' : 'Cálculo dinâmico'}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-white border-[#EDE4D8]">
+          <CardContent className="pt-4">
+            <p className="text-xs text-[#7A6A5A] uppercase font-semibold">Retorno Real</p>
+            <p className="text-xl font-bold text-[#16A34A] mt-1">{formatBRL(retornoRealExibido)}</p>
+            <p className="text-xs text-emerald-700 mt-0.5">
+              Venda − (Despesas Reais + Comissão + Saldo Devedor)
             </p>
           </CardContent>
         </Card>
@@ -572,6 +583,17 @@ export default function OportunidadeDetalhe() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
+            <div className="flex justify-between py-1 border-b border-[#EDE4D8]">
+              <span className="text-[#7A6A5A]">Valor estimado de venda:</span>
+              <span className="font-semibold text-[#2D1B0E]">
+                {formatBRL(op.valor_venda_com_desconto || op.valor_mercado)}
+                {op.desagio_venda ? (
+                  <span className="text-xs font-normal text-gray-500 ml-1.5">
+                    (deságio {op.desagio_venda}%)
+                  </span>
+                ) : null}
+              </span>
+            </div>
             <div className="flex justify-between items-center py-1 border-b border-[#EDE4D8]">
               <span className="text-[#7A6A5A]">Modalidade:</span>
               {podeEditar ? (
