@@ -14,6 +14,11 @@ export function formatPercent(value: number | undefined | null): string {
   return `${value.toFixed(2).replace('.', ',')}%`
 }
 
+export function formatPercent1(value: number | undefined | null): string {
+  if (value === undefined || value === null || isNaN(value) || !Number.isFinite(value)) return '—'
+  return `${value.toFixed(1).replace('.', ',')}%`
+}
+
 export function formatDate(dateStr: string | undefined | null): string {
   if (!dateStr) return '-'
   try {

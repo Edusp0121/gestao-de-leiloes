@@ -30,7 +30,8 @@ import {
   Oportunidade,
 } from '@/services/oportunidades'
 import { getLancamentos, deleteLancamento, Lancamento } from '@/services/lancamentos'
-import { formatBRL, formatPercent, formatDate } from '@/lib/formatters'
+import { getChecklistByOportunidade, Checklist } from '@/services/checklists'
+import { formatBRL, formatPercent, formatPercent1, formatDate } from '@/lib/formatters'
 import { StatusBadge } from '@/components/StatusBadge'
 import { LancamentoFormModal } from '@/components/LancamentoFormModal'
 import { useToast } from '@/hooks/use-toast'
@@ -54,6 +55,8 @@ import {
   calcInvestimentoTotalEstimado,
   calcInvestimentoTotalReal,
   calcRoi,
+  calcRoiAnual,
+  calcAnosEntreDatas,
 } from '@/lib/calculator-utils'
 import { primeiraLetraNome, sociosCobertosPorMarca } from '@/lib/participantes-utils'
 import { Badge } from '@/components/ui/badge'
@@ -64,6 +67,7 @@ export default function OportunidadeDetalhe() {
   const [op, setOp] = useState<Oportunidade | null>(null)
   const [allOps, setAllOps] = useState<Oportunidade[]>([])
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([])
+  const [checklist, setChecklist] = useState<Checklist | null>(null)
   const [loading, setLoading] = useState(true)
   const [financingMethod, setFinancingMethod] = useState<'SAC' | 'PRICE'>('PRICE')
   const [categoryFilter, setCategoryFilter] = useState<ExpenseCategory | 'Todos'>('Todos')
@@ -72,14 +76,16 @@ export default function OportunidadeDetalhe() {
   const loadData = async () => {
     if (!id) return
     try {
-      const [item, lans, list] = await Promise.all([
+      const [item, lans, list, check] = await Promise.all([
         getOportunidade(id),
         getLancamentos(id),
         getOportunidades(),
+        getChecklistByOportunidade(id),
       ])
       setOp(item)
       setLancamentos(lans)
       setAllOps(list)
+      setChecklist(check)
     } catch {
       toast({ title: 'Erro', description: 'Oportunidade não encontrada.', variant: 'destructive' })
     } finally {
@@ -389,6 +395,29 @@ export default function OportunidadeDetalhe() {
   // ROI Real = (Retorno Real / Investimento Total Real) × 100
   const roiReal = calcRoi(retornoRealExibido, investimentoTotalReal)
 
+  // Cálculos de datas e ROI anualizado
+  // Data inicial = data_arremate do checklist (ou fallback para data_aquisicao da oportunidade)
+  const dataArremate = checklist?.data_arremate || op.data_aquisicao || null
+
+  // Data do lançamento real de venda (se houver)
+  const lancamentoVenda = lancamentos.find((l) => {
+    if (l.tipo !== 'Receita') return false
+    const desc = (l.descricao || '').toLowerCase().trim()
+    const cat = (l.categoria || '').toLowerCase().trim()
+    return desc === 'venda' || desc === 'venda do imóvel' || (cat === 'venda' && desc !== 'locação')
+  })
+  const dataVendaReal = lancamentoVenda?.data || null
+
+  // Período em anos para Estimado e Real:
+  // - Retorno Real: data do lançamento real de venda se existir; senão data de hoje.
+  // - Retorno Estimado: data de hoje (ou data do lançamento real se existir).
+  const anosEstimado = calcAnosEntreDatas(dataArremate, dataVendaReal || undefined)
+  const anosReal = calcAnosEntreDatas(dataArremate, dataVendaReal || undefined)
+
+  // ROI anual composto: ((1 + ROI_período)^(1/anos) - 1) * 100
+  const roiAnualEstimado = calcRoiAnual(roiEstimado, anosEstimado)
+  const roiAnualReal = calcRoiAnual(roiReal, anosReal)
+
   // Total Investido (Previsto): apenas o capital necessário estimado das
   // categorias (sem saldo devedor remanescente).
   const totalInvestidoPrevisto = (() => {
@@ -529,40 +558,62 @@ export default function OportunidadeDetalhe() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Card className="bg-white border-[#EDE4D8]">
-          <CardContent className="pt-4">
-            <p className="text-xs text-[#7A6A5A] uppercase font-semibold">Retorno Estimado</p>
-            <p className="text-xl font-bold text-[#16A34A] mt-1">
-              {formatBRL(retornoEstimadoExibido)}
-            </p>
-            <div className="mt-2 pt-2 border-t border-[#EDE4D8]/60 flex items-center justify-between">
-              <span className="text-xs text-[#7A6A5A] font-medium">ROI Estimado:</span>
-              <span className="text-sm font-bold text-[#F97316]">
-                {roiEstimado !== null ? formatPercent(roiEstimado) : '—'}
-              </span>
+          <CardContent className="pt-4 space-y-2">
+            <div>
+              <p className="text-xs text-[#7A6A5A] uppercase font-semibold">Retorno Estimado</p>
+              <p className="text-2xl font-bold text-[#16A34A] mt-1">
+                {formatBRL(retornoEstimadoExibido)}
+              </p>
             </div>
-            <p className="text-[11px] text-[#7A6A5A] mt-0.5">
+            <div className="pt-2 border-t border-[#EDE4D8]/60 space-y-1">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[#7A6A5A] font-medium">ROI no período:</span>
+                <span className="text-sm font-bold text-[#F97316]">
+                  {roiEstimado !== null ? formatPercent1(roiEstimado) : '—'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[#7A6A5A] font-medium">ROI anual:</span>
+                <span className="text-sm font-bold text-[#F97316]">
+                  {roiAnualEstimado !== null ? formatPercent1(roiAnualEstimado) : '—'}
+                </span>
+              </div>
+            </div>
+            <p className="text-[11px] text-[#7A6A5A] pt-1">
               Sobre investimento total estimado ({formatBRL(investimentoTotalEstimado)})
             </p>
           </CardContent>
         </Card>
         <Card className="bg-white border-[#EDE4D8]">
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-[#7A6A5A] uppercase font-semibold">Retorno Real</p>
-              {temVendaReal && (
-                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded">
-                  Venda real lançada
+          <CardContent className="pt-4 space-y-2">
+            <div>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-[#7A6A5A] uppercase font-semibold">Retorno Real</p>
+                {temVendaReal && (
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded">
+                    Venda real lançada
+                  </span>
+                )}
+              </div>
+              <p className="text-2xl font-bold text-[#16A34A] mt-1">
+                {formatBRL(retornoRealExibido)}
+              </p>
+            </div>
+            <div className="pt-2 border-t border-[#EDE4D8]/60 space-y-1">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[#7A6A5A] font-medium">ROI no período:</span>
+                <span className="text-sm font-bold text-[#F97316]">
+                  {roiReal !== null ? formatPercent1(roiReal) : '—'}
                 </span>
-              )}
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[#7A6A5A] font-medium">ROI anual:</span>
+                <span className="text-sm font-bold text-[#F97316]">
+                  {roiAnualReal !== null ? formatPercent1(roiAnualReal) : '—'}
+                </span>
+              </div>
             </div>
-            <p className="text-xl font-bold text-[#16A34A] mt-1">{formatBRL(retornoRealExibido)}</p>
-            <div className="mt-2 pt-2 border-t border-[#EDE4D8]/60 flex items-center justify-between">
-              <span className="text-xs text-[#7A6A5A] font-medium">ROI Real:</span>
-              <span className="text-sm font-bold text-[#F97316]">
-                {roiReal !== null ? formatPercent(roiReal) : '—'}
-              </span>
-            </div>
-            <p className="text-[11px] text-[#7A6A5A] mt-0.5">
+            <p className="text-[11px] text-[#7A6A5A] pt-1">
               {temVendaReal
                 ? `Venda Real (${formatBRL(valorVendaRealLancado)}) − Investimento (${formatBRL(investimentoTotalReal)})`
                 : `Venda Estimada (${formatBRL(op.valor_venda_com_desconto || op.valor_mercado)}) − Investimento (${formatBRL(investimentoTotalReal)})`}

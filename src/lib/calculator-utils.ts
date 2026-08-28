@@ -386,10 +386,84 @@ export function calcInvestimentoTotalReal(
 /**
  * ROI = (Retorno / Investimento Total) × 100
  */
+/**
+ * ROI no período = (Retorno / Investimento Total) × 100
+ */
 export function calcRoi(retorno: number, investimentoTotal: number): number | null {
   if (!investimentoTotal || investimentoTotal <= 0) return null
   const roi = (retorno / investimentoTotal) * 100
-  return Math.round(roi * 100) / 100
+  return Number.isFinite(roi) ? Math.round(roi * 100) / 100 : null
+}
+
+/**
+ * ROI anualizado composto:
+ *   ROI Anual = ((1 + ROI_período)^(1/anos) − 1) × 100
+ * onde:
+ * - roiPeriodoPercent é o ROI no período em porcentagem (ex: 50 para 50%)
+ * - anos é o tempo de posse em anos (dias / 365)
+ *
+ * Retorna null se não houver período válido (anos <= 0), se roiPeriodoPercent for nulo,
+ * ou se a base (1 + ROI_período) for <= 0.
+ */
+export function calcRoiAnual(
+  roiPeriodoPercent: number | null | undefined,
+  anos: number | null | undefined,
+): number | null {
+  if (
+    roiPeriodoPercent === null ||
+    roiPeriodoPercent === undefined ||
+    !Number.isFinite(roiPeriodoPercent) ||
+    anos === null ||
+    anos === undefined ||
+    !Number.isFinite(anos) ||
+    anos <= 0
+  ) {
+    return null
+  }
+
+  const roiDecimal = roiPeriodoPercent / 100
+  const base = 1 + roiDecimal
+  if (base <= 0) return null
+
+  const anualDecimal = Math.pow(base, 1 / anos) - 1
+  if (!Number.isFinite(anualDecimal)) return null
+
+  const anualPercent = anualDecimal * 100
+  return Math.round(anualPercent * 100) / 100
+}
+
+/**
+ * Calcula o tempo decorrido em anos entre duas datas.
+ * Se dataInicio for nula ou inválida, retorna null.
+ * Se dataFim não for fornecida, utiliza a data atual.
+ * Se a diferença em dias for <= 0, retorna 0 ou null.
+ */
+export function calcAnosEntreDatas(
+  dataInicioStr?: string | null,
+  dataFimStr?: string | null,
+): number | null {
+  if (!dataInicioStr) return null
+  try {
+    const dInicio = new Date(dataInicioStr.slice(0, 10) + 'T00:00:00')
+    if (isNaN(dInicio.getTime())) return null
+
+    let dFim: Date
+    if (dataFimStr) {
+      dFim = new Date(dataFimStr.slice(0, 10) + 'T00:00:00')
+      if (isNaN(dFim.getTime())) {
+        dFim = new Date()
+      }
+    } else {
+      dFim = new Date()
+    }
+
+    const diffMs = dFim.getTime() - dInicio.getTime()
+    const diffDias = diffMs / (1000 * 60 * 60 * 24)
+    if (diffDias <= 0) return 0
+    return diffDias / 365
+  } catch {
+    return null
+  }
 }
 
 export function calcTotalInvestido(
