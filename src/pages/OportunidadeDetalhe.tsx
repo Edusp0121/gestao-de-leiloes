@@ -341,19 +341,13 @@ export default function OportunidadeDetalhe() {
     .filter((l) => l.tipo === 'Despesa')
     .reduce((acc, l) => acc + l.valor, 0)
 
-  // Retorno Estimado Global:
-  // Retorno Estimado = Venda - Comissão Venda - Total Despesas Reais - Saldo Devedor Atual
-  // Onde:
-  // - Venda: valor de venda estimado (op.valor_venda_com_desconto || op.valor_mercado)
-  // - Comissão Venda: venda * alíquota de comissão (op.comissao_corretor_percent, padrão 6%)
-  // - Total Despesas Reais: soma de todos os lançamentos de despesas da oportunidade
-  // - Saldo Devedor Atual: saldo atual do financiamento (calculatedSaldoDevedor)
-  const valorVendaEstimado = toNum(op.valor_venda_com_desconto) || toNum(op.valor_mercado)
-  const aliquotaComissaoVenda =
-    op.comissao_corretor_percent != null ? toNum(op.comissao_corretor_percent) : 6
-  const comissaoVenda = valorVendaEstimado * (aliquotaComissaoVenda / 100)
-  const retornoEstimadoCalculado =
-    valorVendaEstimado - comissaoVenda - totalDespesasReais - calculatedSaldoDevedor
+  // Retorno Estimado Dinâmico:
+  // Usa o máximo entre as despesas reais já lançadas e o total de despesas estimadas,
+  // mantendo o saldo devedor atual do financiamento (calculatedSaldoDevedor).
+  const retornoEstimadoCalculado = calcRetornoDinamico(
+    { ...op, saldo_devedor: calculatedSaldoDevedor },
+    totalDespesasReais,
+  )
   const retornoEstimadoExibido = Math.round(retornoEstimadoCalculado * 100) / 100
 
   const temReceitaVenda = lancamentos.some(
