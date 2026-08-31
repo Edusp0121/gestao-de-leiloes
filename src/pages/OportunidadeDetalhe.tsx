@@ -360,19 +360,19 @@ export default function OportunidadeDetalhe() {
   const temVendaReal = valorVendaRealCadastrado > 0
   const valorVendaRealUsado = temVendaReal ? valorVendaRealCadastrado : valorEstimadoVenda
 
-  // Retorno Estimado Dinâmico:
-  // Retorno Estimado = Venda − (max(despesas reais, estimadas) + comissão + saldo devedor)
-  const retornoEstimadoCalculado = calcRetornoDinamico(
-    { ...op, saldo_devedor: calculatedSaldoDevedor },
-    totalDespesasReais,
-  )
+  // Retorno Estimado:
+  // Retorno Estimado = Venda − (despesas estimadas + comissão + saldo devedor)
+  const retornoEstimadoCalculado = calcRetornoDinamico({
+    ...op,
+    saldo_devedor: calculatedSaldoDevedor,
+  })
   const retornoEstimadoExibido = Math.round(retornoEstimadoCalculado * 100) / 100
 
-  // Despesas Estimadas = max(despesas reais, despesas estimadas) -> Divisor do ROI Estimado
-  const despesasEstimadasDivisor = calcInvestimentoTotalEstimado(
-    { ...op, saldo_devedor: calculatedSaldoDevedor },
-    totalDespesasReais,
-  )
+  // Despesas Estimadas -> Divisor do ROI Estimado
+  const despesasEstimadasDivisor = calcInvestimentoTotalEstimado({
+    ...op,
+    saldo_devedor: calculatedSaldoDevedor,
+  })
   // ROI Estimado = (Retorno Estimado / Despesas Estimadas) × 100
   const roiEstimado = calcRoi(retornoEstimadoExibido, despesasEstimadasDivisor)
 

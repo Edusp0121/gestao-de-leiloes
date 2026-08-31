@@ -241,7 +241,7 @@ export function calcRetornoDinamico(
     indice_correcao_medio_mensal?: number | string | null
     custos_estimados_planilha?: any
   },
-  despesasReais?: number,
+  _despesasReais?: number,
 ): number {
   const valorVenda = toNum(op.valor_venda_com_desconto) || toNum(op.valor_mercado)
   const comissaoPercent =
@@ -249,7 +249,7 @@ export function calcRetornoDinamico(
       ? toNum(op.comissao_corretor_percent)
       : 6
   const comissaoVenda = (comissaoPercent / 100) * valorVenda
-  const despesas = Math.max(despesasReais || 0, calcTotalDespesasEstimadas(op))
+  const despesas = calcTotalDespesasEstimadas(op)
   const saldoDevedor = calcSaldoDevedorFinanciamento(op)
 
   const retorno = valorVenda - comissaoVenda - despesas - saldoDevedor
@@ -305,7 +305,7 @@ export function calcRetornoReal(
 
 /**
  * Despesas Totais Estimadas (divisor do ROI Estimado):
- *   Divisor = max(despesas reais, despesas estimadas)
+ *   Divisor = despesas estimadas (sem max com despesas reais)
  *
  * Observação: Comissão de venda e Saldo Devedor NÃO entram no divisor do ROI;
  * entram apenas no cálculo do Retorno (subtraindo da venda).
@@ -326,9 +326,9 @@ export function calcInvestimentoTotalEstimado(
     indice_correcao_medio_mensal?: number | string | null
     custos_estimados_planilha?: any
   },
-  despesasReais: number = 0,
+  _despesasReais: number = 0,
 ): number {
-  const despesas = Math.max(despesasReais || 0, calcTotalDespesasEstimadas(op))
+  const despesas = calcTotalDespesasEstimadas(op)
   return Math.round(despesas * 100) / 100
 }
 
