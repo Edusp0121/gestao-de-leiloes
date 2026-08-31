@@ -342,7 +342,7 @@ export default function OportunidadeDetalhe() {
     principal: op.valor_arrematacao || 101200,
     annualRate: annualRate,
     termMonths: op.prazo_financiamento || 120,
-    paymentsMade: (op.parcelas_pagas || 0) + (op.tempo_estimado_venda_meses || 0),
+    paymentsMade: op.parcelas_pagas || 0,
     method: financingMethod,
     entryPercent: op.percentual_entrada || 10,
     correcaoMensal: op.indice_correcao_medio_mensal || 0,
