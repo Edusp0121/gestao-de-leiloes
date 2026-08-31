@@ -51,7 +51,6 @@ import {
   calcRetornoDinamico,
   calcRetornoReal,
   calcCapitalNecessario,
-  getValorVendaReal,
   calcInvestimentoTotalEstimado,
   calcInvestimentoTotalReal,
   calcRoi,
@@ -355,9 +354,11 @@ export default function OportunidadeDetalhe() {
     .filter((l) => l.tipo === 'Despesa')
     .reduce((acc, l) => acc + l.valor, 0)
 
-  // Valor Real de Venda lançado nos registros
-  const valorVendaRealLancado = getValorVendaReal(lancamentos)
-  const temVendaReal = valorVendaRealLancado > 0
+  // Valor de Venda Real & Valor Estimado de Venda
+  const valorEstimadoVenda = toNum(op.valor_venda_com_desconto) || toNum(op.valor_mercado)
+  const valorVendaRealCadastrado = toNum(op.valor_venda_real)
+  const temVendaReal = valorVendaRealCadastrado > 0
+  const valorVendaRealUsado = temVendaReal ? valorVendaRealCadastrado : valorEstimadoVenda
 
   // Retorno Estimado Dinâmico:
   // Retorno Estimado = Venda − (max(despesas reais, estimadas) + comissão + saldo devedor)
@@ -376,12 +377,11 @@ export default function OportunidadeDetalhe() {
   const roiEstimado = calcRoi(retornoEstimadoExibido, despesasEstimadasDivisor)
 
   // Retorno Real:
-  // Retorno Real = Valor de Venda − (Despesas Reais + Comissão de Venda + Saldo Devedor)
-  // Onde Valor de Venda usa o valor real quando houver lançamento real, senão o estimado.
+  // Retorno Real = valorVendaRealUsado − (despesas reais + comissão de venda + saldo devedor)
+  // Onde valorVendaRealUsado = op.valor_venda_real > 0 ? op.valor_venda_real : valorEstimadoVenda
   const retornoRealCalculado = calcRetornoReal(
     { ...op, saldo_devedor: calculatedSaldoDevedor },
     totalDespesasReais,
-    temVendaReal ? valorVendaRealLancado : undefined,
   )
   const retornoRealExibido = Math.round(retornoRealCalculado * 100) / 100
 
@@ -389,7 +389,6 @@ export default function OportunidadeDetalhe() {
   const despesasReaisDivisor = calcInvestimentoTotalReal(
     { ...op, saldo_devedor: calculatedSaldoDevedor },
     totalDespesasReais,
-    temVendaReal ? valorVendaRealLancado : undefined,
   )
   // ROI Real = (Retorno Real / Despesas Reais) × 100
   const roiReal = calcRoi(retornoRealExibido, despesasReaisDivisor)
@@ -573,7 +572,7 @@ export default function OportunidadeDetalhe() {
                 <p className="text-xs text-[#7A6A5A] uppercase font-semibold">Retorno Real</p>
                 {temVendaReal && (
                   <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded">
-                    Venda real lançada
+                    Venda Real Definida
                   </span>
                 )}
               </div>
@@ -597,8 +596,8 @@ export default function OportunidadeDetalhe() {
             </div>
             <p className="text-[11px] text-[#7A6A5A] pt-1">
               {temVendaReal
-                ? `Venda Real (${formatBRL(valorVendaRealLancado)}) − Despesas (${formatBRL(despesasReaisDivisor)})`
-                : `Venda Estimada (${formatBRL(op.valor_venda_com_desconto || op.valor_mercado)}) − Despesas (${formatBRL(despesasReaisDivisor)})`}
+                ? `Venda Real (${formatBRL(valorVendaRealUsado)}) − Despesas (${formatBRL(despesasReaisDivisor)})`
+                : `Venda Estimada (${formatBRL(valorEstimadoVenda)}) − Despesas (${formatBRL(despesasReaisDivisor)})`}
             </p>
           </CardContent>
         </Card>
@@ -638,12 +637,24 @@ export default function OportunidadeDetalhe() {
             <div className="flex justify-between py-1 border-b border-[#EDE4D8]">
               <span className="text-[#7A6A5A]">Valor estimado de venda:</span>
               <span className="font-semibold text-[#2D1B0E]">
-                {formatBRL(op.valor_venda_com_desconto || op.valor_mercado)}
+                {formatBRL(valorEstimadoVenda)}
                 {op.desagio_venda ? (
                   <span className="text-xs font-normal text-gray-500 ml-1.5">
                     (deságio {op.desagio_venda}%)
                   </span>
                 ) : null}
+              </span>
+            </div>
+            <div className="flex justify-between py-1 border-b border-[#EDE4D8]">
+              <span className="text-[#7A6A5A]">Valor de Venda Real:</span>
+              <span className="font-semibold text-[#2D1B0E]">
+                {op.valor_venda_real != null && op.valor_venda_real > 0 ? (
+                  formatBRL(op.valor_venda_real)
+                ) : (
+                  <span className="text-xs font-normal text-gray-400">
+                    Não informado (usa estimado)
+                  </span>
+                )}
               </span>
             </div>
             <div className="flex justify-between items-center py-1 border-b border-[#EDE4D8]">

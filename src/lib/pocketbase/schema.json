@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-31T18:31:19.398Z",
+  "generatedAt": "2026-08-31T19:19:55.308Z",
   "collections": [
     {
       "name": "users",
@@ -414,6 +414,12 @@
         },
         {
           "name": "correcao_saldo_manual",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_venda_real",
           "type": "number",
           "required": false,
           "system": false

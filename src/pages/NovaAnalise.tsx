@@ -96,6 +96,7 @@ const DEFAULT_FORM = {
   banco_selecionado: 'Caixa Balcão',
   data_aquisicao: new Date().toISOString().split('T')[0],
   status: 'Em análise' as 'Em análise' | 'Arrematada' | 'Em andamento' | 'Vendida',
+  valor_venda_real: '' as number | string,
   desagio_venda: 10,
   valor_mercado: 240000,
   valor_arrematacao: 101200,
@@ -412,7 +413,15 @@ export default function NovaAnalise() {
       if (relatorioFile) {
         const formData = new FormData()
         Object.entries(form).forEach(([key, val]) => {
-          formData.append(key, String(val))
+          if (key === 'valor_venda_real') {
+            if (val !== '' && val != null) {
+              formData.append(key, String(Number(val)))
+            } else {
+              formData.append(key, '')
+            }
+          } else {
+            formData.append(key, String(val))
+          }
         })
         Object.entries(computed).forEach(([key, val]) => {
           formData.append(key, String(val))
@@ -437,6 +446,10 @@ export default function NovaAnalise() {
         // Envio JSON plano (sem arquivo) — evita totalmente a armadilha do FormData.
         const payload: any = {
           ...form,
+          valor_venda_real:
+            form.valor_venda_real !== '' && form.valor_venda_real != null
+              ? Number(form.valor_venda_real)
+              : null,
           ...computed,
           participantes: participantes,
           observadores: observadores,
@@ -920,6 +933,20 @@ export default function NovaAnalise() {
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-[#8B5A2B] mb-3">Venda</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Valor de Venda Real (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="Deixar em branco se não vendido"
+                  value={form.valor_venda_real}
+                  onChange={(e) => handleChange('valor_venda_real', e.target.value)}
+                />
+                <p className="text-xs text-[#7A6A5A]">
+                  Opcional. Se preenchido, define o valor real de venda da oportunidade.
+                </p>
+                {numericFieldError('valor_venda_real')}
+              </div>
               <div className="space-y-2">
                 <Label>Comissão Corretor (%)</Label>
                 <Input

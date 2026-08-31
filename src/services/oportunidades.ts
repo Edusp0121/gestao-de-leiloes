@@ -56,6 +56,7 @@ export interface Oportunidade {
   acordo_desocupacao?: number
   baixa_gravames?: number
   foro?: number
+  valor_venda_real?: number | null
   valor_venda_com_desconto?: number
   maior_lucro_esperado?: number
   retorno_estimado?: number

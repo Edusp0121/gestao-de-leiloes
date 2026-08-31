@@ -229,6 +229,7 @@ export function calcRetornoDinamico(
   op: {
     valor_venda_com_desconto?: number | string | null
     valor_mercado?: number | string | null
+    valor_venda_real?: number | string | null
     comissao_corretor_percent?: number | string | null
     modalidade_financiamento?: 'À Vista' | 'SAC' | 'PRICE' | string
     valor_arrematacao?: number | string | null
@@ -256,37 +257,22 @@ export function calcRetornoDinamico(
 }
 
 /**
- * Retorna o valor real de venda da oportunidade com base nos lançamentos cadastrados.
- * Considera receitas de Venda (ex: lançamentos de receita com categoria Venda ou descrição Venda).
- * Retorna 0 se não houver lançamentos reais de venda.
- */
-export function getValorVendaReal(
-  lancamentos?: Array<{ tipo: string; descricao?: string; categoria?: string; valor: number }>,
-): number {
-  if (!lancamentos || lancamentos.length === 0) return 0
-  const receitasVenda = lancamentos.filter((l) => {
-    if (l.tipo !== 'Receita') return false
-    const desc = (l.descricao || '').toLowerCase().trim()
-    const cat = (l.categoria || '').toLowerCase().trim()
-    return desc === 'venda' || desc === 'venda do imóvel' || (cat === 'venda' && desc !== 'locação')
-  })
-  const total = receitasVenda.reduce((acc, l) => acc + (toNum(l.valor) || 0), 0)
-  return Math.round(total * 100) / 100
-}
-
-/**
  * Retorno REAL de uma oportunidade:
  *
- *   Retorno Real = Valor de Venda − (Despesas Reais + Comissão de Venda + Saldo Devedor)
+ *   Retorno Real = valorVendaRealUsado − (despesas reais + comissão de venda + saldo devedor)
  *
  * Onde:
- * - Valor de Venda = valor real de venda se houver lançamento real, senão valor estimado de venda
- * - Despesas Reais = soma dos lançamentos reais de despesa (sem usar estimativa)
- * - Comissão de Venda = comissão de venda (comissao_corretor_percent% × valor de venda)
- * - Saldo Devedor = saldo devedor calculado (o mesmo usado no Retorno Estimado)
+ * - valorVendaRealUsado = op.valor_venda_real > 0 ? op.valor_venda_real : valorEstimadoVenda
+ * - despesas reais = soma de todos os lançamentos de despesa
+ * - comissão de venda = comissao_corretor_percent% × valorVendaRealUsado
+ * - saldo devedor = saldo devedor calculado
+ *
+ * Lançamentos de receita (Sinal, Saldo, parcelas, etc.) são apenas fluxo de caixa
+ * e NÃO entram no cálculo do Retorno Real.
  */
 export function calcRetornoReal(
   op: {
+    valor_venda_real?: number | string | null
     valor_venda_com_desconto?: number | string | null
     valor_mercado?: number | string | null
     comissao_corretor_percent?: number | string | null
@@ -300,18 +286,20 @@ export function calcRetornoReal(
     indice_correcao_medio_mensal?: number | string | null
   },
   despesasReais: number = 0,
-  vendaReal?: number,
 ): number {
-  const valorVendaEstimado = toNum(op.valor_venda_com_desconto) || toNum(op.valor_mercado)
-  const valorVenda = vendaReal !== undefined && vendaReal > 0 ? vendaReal : valorVendaEstimado
+  const valorEstimadoVenda = toNum(op.valor_venda_com_desconto) || toNum(op.valor_mercado)
+  const valorVendaRealCadastrado = toNum(op.valor_venda_real)
+  const valorVendaRealUsado =
+    valorVendaRealCadastrado > 0 ? valorVendaRealCadastrado : valorEstimadoVenda
+
   const comissaoPercent =
     op.comissao_corretor_percent != null && op.comissao_corretor_percent !== ''
       ? toNum(op.comissao_corretor_percent)
       : 6
-  const comissaoVenda = (comissaoPercent / 100) * valorVenda
+  const comissaoVenda = (comissaoPercent / 100) * valorVendaRealUsado
   const saldoDevedor = calcSaldoDevedorFinanciamento(op)
 
-  const retorno = valorVenda - (toNum(despesasReais) + comissaoVenda + saldoDevedor)
+  const retorno = valorVendaRealUsado - (toNum(despesasReais) + comissaoVenda + saldoDevedor)
   return Math.round(retorno * 100) / 100
 }
 
@@ -324,6 +312,7 @@ export function calcRetornoReal(
  */
 export function calcInvestimentoTotalEstimado(
   op: {
+    valor_venda_real?: number | string | null
     valor_venda_com_desconto?: number | string | null
     valor_mercado?: number | string | null
     comissao_corretor_percent?: number | string | null
@@ -352,6 +341,7 @@ export function calcInvestimentoTotalEstimado(
  */
 export function calcInvestimentoTotalReal(
   _op?: {
+    valor_venda_real?: number | string | null
     valor_venda_com_desconto?: number | string | null
     valor_mercado?: number | string | null
     comissao_corretor_percent?: number | string | null
@@ -365,7 +355,6 @@ export function calcInvestimentoTotalReal(
     indice_correcao_medio_mensal?: number | string | null
   },
   despesasReais: number = 0,
-  _vendaReal?: number,
 ): number {
   const despesas = toNum(despesasReais)
   return Math.round(despesas * 100) / 100
