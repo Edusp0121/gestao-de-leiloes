@@ -1,4 +1,5 @@
 import pb from '@/lib/pocketbase/client'
+import { Lancamento } from '@/services/lancamentos'
 
 export interface UserRef {
   id: string
@@ -125,13 +126,40 @@ export function userRoleOnOp(op: Oportunidade): UserRole {
 }
 
 /**
- * Pode editar a oportunidade (UI): admin ou criador.
- * Participantes comuns não editam (regra de negócio: apenas admin manipula).
- * Observadores nunca.
+ * Verifica se a oportunidade possui ao menos um lançamento de despesa vinculado.
+ * Usado pela regra "opção B" de exclusão aprovada pelo Edu.
+ */
+export function opTemDespesaLancada(
+  opId: string,
+  lancamentos: Pick<Lancamento, 'oportunidade' | 'tipo'>[],
+): boolean {
+  return lancamentos.some((l) => l.oportunidade === opId && l.tipo === 'Despesa')
+}
+
+/**
+ * Pode editar a oportunidade (UI): admin, dono (criador) ou participante.
+ * Observadores NUNCA editam.
  */
 export function canEditOp(op: Oportunidade): boolean {
   const role = userRoleOnOp(op)
-  return role === 'admin' || role === 'creator'
+  return role === 'admin' || role === 'creator' || role === 'participant'
+}
+
+/**
+ * Pode excluir a oportunidade (UI) — regra "opção B":
+ *  - Sem nenhum lançamento de despesa: dono + participantes.
+ *  - Com ao menos um lançamento de despesa: apenas admin + dono.
+ * Observadores NUNCA excluem.
+ */
+export function canDeleteOp(
+  op: Oportunidade,
+  lancamentos: Pick<Lancamento, 'oportunidade' | 'tipo'>[],
+): boolean {
+  const role = userRoleOnOp(op)
+  if (role === 'observer' || role === 'none') return false
+  if (role === 'admin' || role === 'creator') return true
+  // Participante: perde o excluir quando já existe despesa lançada.
+  return !opTemDespesaLancada(op.id, lancamentos)
 }
 
 /**

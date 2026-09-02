@@ -42,6 +42,7 @@ import {
   getOportunidades,
   deleteOportunidade,
   canEditOp,
+  canDeleteOp,
   Oportunidade,
 } from '@/services/oportunidades'
 import { getLancamentos, Lancamento } from '@/services/lancamentos'
@@ -515,6 +516,11 @@ export default function Dashboard() {
                       .filter((l) => l.oportunidade === op.id && l.tipo === 'Despesa')
                       .reduce((acc, l) => acc + l.valor, 0)
                     const totalGasto = calcTotalInvestido(op, despesasOp)
+                    // Regra "opção B": editar = dono + participantes (observadores nunca);
+                    // excluir = dono + participantes sem despesa lançada; com despesa,
+                    // apenas admin + dono.
+                    const podeEditar = canEditOp(op)
+                    const podeExcluir = canDeleteOp(op, lancamentos)
                     return (
                       <TableRow
                         key={op.id}
@@ -549,7 +555,7 @@ export default function Dashboard() {
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-1">
-                            {canEditOp(op) ? (
+                            {podeEditar ? (
                               <>
                                 <Button
                                   variant="ghost"
@@ -560,6 +566,10 @@ export default function Dashboard() {
                                 >
                                   <Pencil className="w-4 h-4" />
                                 </Button>
+                              </>
+                            ) : null}
+                            {podeExcluir ? (
+                              <>
                                 <AlertDialog
                                   open={deleteDialogOpen && deletingId === op.id}
                                   onOpenChange={(open) => {
@@ -601,9 +611,10 @@ export default function Dashboard() {
                                   </AlertDialogContent>
                                 </AlertDialog>
                               </>
-                            ) : (
+                            ) : null}
+                            {!podeEditar && !podeExcluir ? (
                               <span className="text-xs text-[#7A6A5A]">—</span>
-                            )}
+                            ) : null}
                           </div>
                         </TableCell>
                       </TableRow>
