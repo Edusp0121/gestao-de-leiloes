@@ -1,5 +1,7 @@
 import { calculateSaldoDevedor, type FinancingParams } from './financing-utils'
 import { getEstimatedCostsByCategory } from './expense-categories'
+import { primeiraLetraNome, sociosCobertosPorMarca } from './participantes-utils'
+import { toIdArray, type Oportunidade, type UserRef } from '@/services/oportunidades'
 
 export interface CalculatorInputs {
   valor_mercado: number
@@ -414,4 +416,226 @@ export function calcTotalInvestido(
   despesas: number,
 ): number {
   return Math.round(despesas * 100) / 100
+}
+
+/**
+ * Extrai a lista de sócios participantes de uma oportunidade (excluindo admin e observadores).
+ * Observadores nunca entram como sócios participantes.
+ */
+export function getSociosParticipantesOp(
+  op: Oportunidade,
+  usuariosCache?: Map<string, { id: string; name?: string; email?: string; admin?: boolean }>,
+): UserRef[] {
+  const knownUsers = new Map<
+    string,
+    { id: string; name?: string; email?: string; admin?: boolean }
+  >()
+
+  if (op.expand?.usuario?.id) {
+    knownUsers.set(op.expand.usuario.id, {
+      id: op.expand.usuario.id,
+      name: op.expand.usuario.name,
+      email: op.expand.usuario.email,
+      admin: (op.expand.usuario as any).admin,
+    })
+  }
+  if (Array.isArray(op.expand?.participantes)) {
+    op.expand.participantes.forEach((p) => {
+      if (p?.id) {
+        knownUsers.set(p.id, {
+          id: p.id,
+          name: p.name,
+          email: p.email,
+          admin: (p as any).admin,
+        })
+      }
+    })
+  }
+
+  const allUserIds = new Set<string>()
+  if (op.usuario) allUserIds.add(op.usuario)
+  toIdArray(op.participantes).forEach((id) => allUserIds.add(id))
+
+  return Array.from(allUserIds)
+    .map((id) => {
+      const fromExpand = knownUsers.get(id)
+      const fromCache = usuariosCache?.get(id)
+      const name = fromExpand?.name || fromCache?.name
+      const email = fromExpand?.email || fromCache?.email
+      const isAdmin = fromExpand?.admin || fromCache?.admin
+      return { id, name, email, admin: isAdmin }
+    })
+    .filter((u) => !u.admin && u.name !== 'Doulhe3')
+}
+
+export interface SocioDespesaRateio {
+  id: string
+  nome: string
+  letra: string
+  valor: number
+}
+
+/**
+ * Calcula o rateio de despesas de uma oportunidade entre seus sócios participantes.
+ *
+ * Regras:
+ * - Letra individual (ex: E, C) = 100% do valor da despesa para aquele sócio.
+ * - "A" (Ambos) = 50% do valor com 2 sócios (ou valor / cobertos).
+ * - "T" (Todos) = valor ÷ número de participantes.
+ */
+export function calcRateioDespesasPorSocioOp(
+  op: Oportunidade,
+  lancamentosOp: { tipo: string; valor: number; quem_pagou?: string }[],
+  sociosParticipantes?: UserRef[],
+): Record<string, SocioDespesaRateio> {
+  const socios = sociosParticipantes || getSociosParticipantesOp(op)
+  const totalSocios = socios.length
+
+  const acc: Record<string, SocioDespesaRateio> = {}
+  socios.forEach((p) => {
+    acc[p.id] = {
+      id: p.id,
+      nome: p.name || p.email || 'Sócio',
+      letra: primeiraLetraNome(p.name || p.email || '?'),
+      valor: 0,
+    }
+  })
+
+  const despesas = (lancamentosOp || []).filter((l) => l.tipo === 'Despesa')
+  despesas.forEach((l) => {
+    const valor = toNum(l.valor)
+    if (valor <= 0) return
+
+    const cobertos = sociosCobertosPorMarca(l.quem_pagou, totalSocios)
+    if (cobertos <= 0 || totalSocios === 0) return
+
+    const parte = valor / cobertos
+
+    if (l.quem_pagou === 'A' || l.quem_pagou === 'T') {
+      socios.forEach((p) => {
+        if (acc[p.id]) {
+          acc[p.id].valor += parte
+        }
+      })
+    } else if (l.quem_pagou) {
+      const alvo = socios.find((p) => primeiraLetraNome(p.name || p.email || '?') === l.quem_pagou)
+      if (alvo && acc[alvo.id]) {
+        acc[alvo.id].valor += valor
+      }
+    }
+  })
+
+  Object.keys(acc).forEach((k) => {
+    acc[k].valor = Math.round(acc[k].valor * 100) / 100
+  })
+
+  return acc
+}
+
+export interface SocioLucroRateioResult {
+  oportunidadeId: string
+  valorVendaReal: number
+  despesasReaisTotais: number
+  comissaoVenda: number
+  saldoDevedor: number
+  lucroDoNegocio: number
+  participantesCount: number
+  participantes: {
+    id: string
+    nome: string
+    letra: string
+    despesasPagas: number
+    percentualDespesas: number
+    parteLucro: number
+  }[]
+}
+
+/**
+ * Calcula o lucro do negócio e o rateio de lucro por sócio para uma oportunidade com venda real.
+ *
+ * Gatilho: valor_venda_real > 0.
+ *
+ * Fórmulas:
+ *  - Lucro do negócio = Venda Real − (Despesas Reais totais + Comissão de Venda + Saldo Devedor)
+ *  - Comissão de venda = (comissao_corretor_percent || 6)% × Venda Real
+ *  - Parte do sócio:
+ *      * 1 participante: 100%
+ *      * 2 participantes:
+ *          - Se houver despesas totais > 0: proporcional (Lucro × (Despesas pagas / Despesas totais)),
+ *            que com divisões 50/50 resulta em 50% cada.
+ *          - Se despesas totais = 0: 50% cada (Lucro / 2).
+ *      * 3+ participantes:
+ *          - Se houver despesas totais > 0: proporcional (Lucro × (Despesas pagas / Despesas totais)).
+ *          - Se despesas totais = 0: divisão igualitária (Lucro ÷ N).
+ */
+export function calcRateioLucroPorSocioOp(
+  op: Oportunidade,
+  lancamentosOp: { tipo: string; valor: number; quem_pagou?: string }[],
+  sociosParticipantes?: UserRef[],
+): SocioLucroRateioResult | null {
+  const valorVendaReal = toNum(op.valor_venda_real)
+  if (valorVendaReal <= 0) return null
+
+  const socios = sociosParticipantes || getSociosParticipantesOp(op)
+  const numParticipantes = socios.length
+  if (numParticipantes === 0) return null
+
+  // Despesas reais totais da oportunidade
+  const despesasReaisTotais = (lancamentosOp || [])
+    .filter((l) => l.tipo === 'Despesa')
+    .reduce((sum, l) => sum + toNum(l.valor), 0)
+
+  // Alíquota de comissão de venda
+  const aliquotaComissao =
+    op.comissao_corretor_percent != null && (op.comissao_corretor_percent as unknown) !== ''
+      ? toNum(op.comissao_corretor_percent)
+      : 6
+  const comissaoVenda = valorVendaReal * (aliquotaComissao / 100)
+
+  // Saldo devedor
+  const saldoDevedor = calcSaldoDevedorFinanciamento(op)
+
+  // Lucro do negócio = Venda Real − (Despesas Reais totais + Comissão de Venda + Saldo Devedor)
+  const lucroDoNegocio =
+    Math.round((valorVendaReal - (despesasReaisTotais + comissaoVenda + saldoDevedor)) * 100) / 100
+
+  // Rateio das despesas pagas por sócio
+  const rateioDespesas = calcRateioDespesasPorSocioOp(op, lancamentosOp, socios)
+
+  const participantesCalculados = socios.map((p) => {
+    const despesasPagas = rateioDespesas[p.id]?.valor || 0
+    let parteLucro = 0
+    let percentualDespesas = 0
+
+    if (numParticipantes === 1) {
+      percentualDespesas = 1
+      parteLucro = lucroDoNegocio
+    } else if (despesasReaisTotais > 0) {
+      percentualDespesas = despesasPagas / despesasReaisTotais
+      parteLucro = lucroDoNegocio * percentualDespesas
+    } else {
+      percentualDespesas = 1 / numParticipantes
+      parteLucro = lucroDoNegocio / numParticipantes
+    }
+
+    return {
+      id: p.id,
+      nome: p.name || p.email || 'Sócio',
+      letra: primeiraLetraNome(p.name || p.email || '?'),
+      despesasPagas: Math.round(despesasPagas * 100) / 100,
+      percentualDespesas: Math.round(percentualDespesas * 10000) / 100,
+      parteLucro: Math.round(parteLucro * 100) / 100,
+    }
+  })
+
+  return {
+    oportunidadeId: op.id,
+    valorVendaReal: Math.round(valorVendaReal * 100) / 100,
+    despesasReaisTotais: Math.round(despesasReaisTotais * 100) / 100,
+    comissaoVenda: Math.round(comissaoVenda * 100) / 100,
+    saldoDevedor: Math.round(saldoDevedor * 100) / 100,
+    lucroDoNegocio,
+    participantesCount: numParticipantes,
+    participantes: participantesCalculados,
+  }
 }

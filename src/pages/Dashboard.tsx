@@ -65,13 +65,17 @@ import { EXPENSE_CATEGORIES, categorizeExpense, isVendaReceita } from '@/lib/exp
 import {
   calcTotalInvestido,
   calcCapitalNecessario,
-  calcRetornoDinamico,
   calcSaldoDevedorFinanciamento,
+  calcRateioDespesasPorSocioOp,
+  calcRateioLucroPorSocioOp,
+  getSociosParticipantesOp,
 } from '@/lib/calculator-utils'
+import { useAuth } from '@/hooks/use-auth'
 
 export default function Dashboard() {
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { user } = useAuth()
   const [oportunidades, setOportunidades] = useState<Oportunidade[]>([])
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([])
   const [loading, setLoading] = useState(true)
@@ -116,21 +120,93 @@ export default function Dashboard() {
     }
   }
 
-  const totalInvestido = useMemo(
-    () =>
-      lancamentos
-        .filter((l) => l.tipo === 'Despesa' && !isVendaReceita(l.descricao))
-        .reduce((acc, l) => acc + l.valor, 0),
-    [lancamentos],
-  )
+  // ID do usuário logado para apuração individual por sócio
+  const currentUserId = user?.id
 
-  const totalRealizado = useMemo(
-    () =>
-      oportunidades
-        .filter((op) => op.status === 'Vendida')
-        .reduce((acc, op) => acc + (op.valor_venda_com_desconto || op.valor_mercado || 0), 0),
-    [oportunidades],
-  )
+  /**
+   * 1. Card "Total Investido"
+   * - Soma das despesas lançadas em nome do usuário logado (usar o campo quem_pagou / rateio).
+   * - Regra de rateio por marcação de pagamento:
+   *     - Letra individual = 100% do valor para aquele sócio.
+   *     - "A" (Ambos) = 50% do valor com 2 sócios.
+   *     - "T" (Todos) = valor ÷ número de participantes.
+   * - Abaixo do valor do card: número de oportunidades em que o usuário possui despesa em nome dele.
+   */
+  const investidoStats = useMemo(() => {
+    if (!currentUserId) {
+      return { total: 0, opsComDespesaCount: 0 }
+    }
+
+    let somaInvestido = 0
+    let opsComDespesa = 0
+
+    oportunidades.forEach((op) => {
+      const socios = getSociosParticipantesOp(op)
+      // Verifica se o usuário atual é sócio participante desta oportunidade
+      const isSocio = socios.some((s) => s.id === currentUserId)
+      if (!isSocio) return
+
+      const opLancamentos = lancamentos.filter((l) => l.oportunidade === op.id)
+      const rateioMap = calcRateioDespesasPorSocioOp(op, opLancamentos, socios)
+      const valorSocio = rateioMap[currentUserId]?.valor || 0
+
+      if (valorSocio > 0) {
+        somaInvestido += valorSocio
+        opsComDespesa += 1
+      }
+    })
+
+    return {
+      total: Math.round(somaInvestido * 100) / 100,
+      opsComDespesaCount: opsComDespesa,
+    }
+  }, [oportunidades, lancamentos, currentUserId])
+
+  /**
+   * 2. Card "Total Realizado"
+   * - Soma do valor que efetivamente coube ao usuário logado no lucro.
+   * - Gatilho: só computar oportunidades com valor_venda_real > 0.
+   * - Fórmula do rateio do lucro:
+   *     - Lucro do negócio = Venda Real − (Despesas Reais totais + Comissão de Venda + Saldo Devedor)
+   *     - Parte do sócio = Lucro × (Despesas pagas por ele ÷ Despesas totais)
+   * - Regra de divisão:
+   *     - 1 participante = 100%
+   *     - 2 participantes = 50% cada (ou proporcional às despesas)
+   *     - 3+ participantes = lucro ÷ N proporcional ao que cada um pagou.
+   * - Abaixo do valor do card: número de oportunidades computadas.
+   */
+  const realizadoStats = useMemo(() => {
+    if (!currentUserId) {
+      return { total: 0, opsRealizadasCount: 0 }
+    }
+
+    let somaLucroSocio = 0
+    let opsRealizadas = 0
+
+    oportunidades.forEach((op) => {
+      const valorVendaReal = Number(op.valor_venda_real) || 0
+      if (valorVendaReal <= 0) return
+
+      const socios = getSociosParticipantesOp(op)
+      const isSocio = socios.some((s) => s.id === currentUserId)
+      if (!isSocio) return
+
+      const opLancamentos = lancamentos.filter((l) => l.oportunidade === op.id)
+      const rateioLucro = calcRateioLucroPorSocioOp(op, opLancamentos, socios)
+      if (!rateioLucro) return
+
+      const socioResult = rateioLucro.participantes.find((p) => p.id === currentUserId)
+      if (socioResult) {
+        somaLucroSocio += socioResult.parteLucro
+        opsRealizadas += 1
+      }
+    })
+
+    return {
+      total: Math.round(somaLucroSocio * 100) / 100,
+      opsRealizadasCount: opsRealizadas,
+    }
+  }, [oportunidades, lancamentos, currentUserId])
 
   const retornoEstimadoTotal = useMemo(
     () =>
@@ -233,8 +309,14 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-[#5C3A21]">{formatBRL(totalInvestido)}</div>
-            <p className="text-xs text-[#7A6A5A] mt-1">Entrada + Parcelas + Despesas</p>
+            <div className="text-2xl font-bold text-[#5C3A21]">
+              {formatBRL(investidoStats.total)}
+            </div>
+            <p className="text-xs text-[#7A6A5A] mt-1">
+              {investidoStats.opsComDespesaCount === 1
+                ? '1 oportunidade com despesa'
+                : `${investidoStats.opsComDespesaCount} oportunidades com despesas`}
+            </p>
           </CardContent>
         </Card>
 
@@ -248,8 +330,14 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-[#16A34A]">{formatBRL(totalRealizado)}</div>
-            <p className="text-xs text-[#7A6A5A] mt-1">Imóveis Vendidos</p>
+            <div className="text-2xl font-bold text-[#16A34A]">
+              {formatBRL(realizadoStats.total)}
+            </div>
+            <p className="text-xs text-[#7A6A5A] mt-1">
+              {realizadoStats.opsRealizadasCount === 1
+                ? '1 oportunidade computada'
+                : `${realizadoStats.opsRealizadasCount} oportunidades computadas`}
+            </p>
           </CardContent>
         </Card>
 

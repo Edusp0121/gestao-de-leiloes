@@ -55,8 +55,10 @@ import {
   calcInvestimentoTotalReal,
   calcRoi,
   calcRoiAnual,
+  getSociosParticipantesOp,
+  calcRateioDespesasPorSocioOp,
 } from '@/lib/calculator-utils'
-import { primeiraLetraNome, sociosCobertosPorMarca } from '@/lib/participantes-utils'
+import { primeiraLetraNome } from '@/lib/participantes-utils'
 import { Badge } from '@/components/ui/badge'
 import pb from '@/lib/pocketbase/client'
 
@@ -186,50 +188,10 @@ export default function OportunidadeDetalhe() {
 
   // Sócios PARTICIPANTES da oportunidade (observadores nunca entram no
   // rateio nem na lista de sócios). O Administrador ("Doulhe3") nunca participa do rateio.
-  const participantesAtuais: { id: string; name?: string; email?: string; admin?: boolean }[] =
-    useMemo(() => {
-      if (!op) return []
-      const knownUsers = new Map<
-        string,
-        { id: string; name?: string; email?: string; admin?: boolean }
-      >()
-
-      if (op.expand?.usuario?.id) {
-        knownUsers.set(op.expand.usuario.id, {
-          id: op.expand.usuario.id,
-          name: op.expand.usuario.name,
-          email: op.expand.usuario.email,
-          admin: (op.expand.usuario as any).admin,
-        })
-      }
-      if (Array.isArray(op.expand?.participantes)) {
-        op.expand!.participantes.forEach((p) => {
-          if (p?.id) {
-            knownUsers.set(p.id, {
-              id: p.id,
-              name: p.name,
-              email: p.email,
-              admin: (p as any).admin,
-            })
-          }
-        })
-      }
-
-      const allUserIds = new Set<string>()
-      if (op.usuario) allUserIds.add(op.usuario)
-      toIdArray(op.participantes).forEach((id) => allUserIds.add(id))
-
-      return Array.from(allUserIds)
-        .map((id) => {
-          const fromExpand = knownUsers.get(id)
-          const fromCache = usuariosCache.get(id)
-          const name = fromExpand?.name || fromCache?.name
-          const email = fromExpand?.email || fromCache?.email
-          const isAdmin = fromExpand?.admin || fromCache?.admin
-          return { id, name, email, admin: isAdmin }
-        })
-        .filter((u) => !u.admin && u.name !== 'Doulhe3')
-    }, [op, usuariosCache])
+  const participantesAtuais = useMemo(() => {
+    if (!op) return []
+    return getSociosParticipantesOp(op, usuariosCache)
+  }, [op, usuariosCache])
 
   // Observadores da oportunidade (apenas para exibição).
   const observadoresAtuais: { id: string; name?: string; email?: string }[] = useMemo(() => {
@@ -255,40 +217,11 @@ export default function OportunidadeDetalhe() {
   const podeGerenciarLancamentos = op ? canManageLancamentos(op) : false
   const isObserver = op ? userRoleOnOp(op) === 'observer' : false
 
-  // Rateio de despesas por sócio: soma o valor de cada despesa dividido
-  // igualmente entre os sócios cobertos pela marca "quem_pagou".
+  // Rateio de despesas por sócio usando a função compartilhada de calculator-utils.
   const rateioPorSocio = useMemo(() => {
-    const totalSocios = participantesAtuais.length
-    const acc: Record<string, { valor: number; nome: string; letra: string }> = {}
-    participantesAtuais.forEach((p) => {
-      acc[p.id] = {
-        valor: 0,
-        nome: p.name || p.email || 'Sócio',
-        letra: primeiraLetraNome(p.name || p.email || '?'),
-      }
-    })
-    const despesas = lancamentos.filter((l) => l.tipo === 'Despesa')
-    despesas.forEach((l) => {
-      const cobertos = sociosCobertosPorMarca(l.quem_pagou, totalSocios)
-      if (cobertos <= 0 || totalSocios === 0) return
-      const parte = l.valor / cobertos
-      // "A" = 2 sócios; "T" = todos; letra individual = sócio com aquela letra.
-      if (l.quem_pagou === 'A' || l.quem_pagou === 'T') {
-        participantesAtuais.forEach((p) => {
-          if (acc[p.id]) acc[p.id].valor += parte
-        })
-      } else if (l.quem_pagou) {
-        const alvo = participantesAtuais.find(
-          (p) => primeiraLetraNome(p.name || p.email || '?') === l.quem_pagou,
-        )
-        if (alvo && acc[alvo.id]) acc[alvo.id].valor += l.valor
-      }
-    })
-    Object.keys(acc).forEach((k) => {
-      acc[k].valor = Math.round(acc[k].valor * 100) / 100
-    })
-    return acc
-  }, [lancamentos, participantesAtuais])
+    if (!op) return {}
+    return calcRateioDespesasPorSocioOp(op, lancamentos, participantesAtuais)
+  }, [op, lancamentos, participantesAtuais])
 
   const totalDespesasRateio = useMemo(
     () => lancamentos.filter((l) => l.tipo === 'Despesa').reduce((acc, l) => acc + l.valor, 0),
