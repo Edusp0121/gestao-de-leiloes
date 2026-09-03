@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-02T20:16:59.094Z",
+  "generatedAt": "2026-09-03T12:16:47.069Z",
   "collections": [
     {
       "name": "users",
@@ -499,7 +499,7 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": ["Aquisição", "Tributos", "Desocupação", "Mensais", "Venda"]
+          "selectValues": ["Aquisição", "Encargos", "Desocupação", "Mensais", "Venda"]
         },
         {
           "name": "quem_pagou",

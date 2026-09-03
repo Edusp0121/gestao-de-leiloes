@@ -113,7 +113,7 @@ export const toNum = (v: unknown): number => {
 
 /**
  * Total das despesas estimadas de uma oportunidade (soma de todas as
- * categorias: Aquisição + Tributos + Desocupação + Mensais + Venda).
+ * categorias: Aquisição + Encargos + Desocupação + Mensais + Venda).
  *
  * A categoria "Venda" aqui contém apenas DESPESAS (Corretagem, Lucro
  * Imobiliário e Saldo Devedor); os itens de receita da categoria Venda
@@ -121,8 +121,8 @@ export const toNum = (v: unknown): number => {
  */
 export function calcTotalDespesasEstimadas(op: unknown): number {
   const estimated = getEstimatedCostsByCategory(op as any)
-  const { Aquisição = 0, Tributos = 0, Desocupação = 0, Mensais = 0 } = estimated
-  const total = Aquisição + Tributos + Desocupação + Mensais
+  const { Aquisição = 0, Encargos = 0, Desocupação = 0, Mensais = 0 } = estimated
+  const total = Aquisição + Encargos + Desocupação + Mensais
   return Math.round(total * 100) / 100
 }
 

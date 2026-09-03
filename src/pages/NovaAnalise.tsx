@@ -803,10 +803,10 @@ export default function NovaAnalise() {
             </div>
           </div>
 
-          {/* Tributos */}
+          {/* Encargos */}
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-[#8B5A2B] mb-3">
-              Tributos
+              Encargos
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               <div className="space-y-2">

@@ -25,7 +25,7 @@ import { getErrorMessage } from '@/lib/pocketbase/errors'
 import { CATEGORY_DESCRIPTIONS } from '@/lib/expense-categories'
 import { buildQuemPagouOptions, defaultQuemPagou } from '@/lib/participantes-utils'
 
-const CATEGORIAS = ['Aquisição', 'Tributos', 'Desocupação', 'Mensais', 'Venda'] as const
+const CATEGORIAS = ['Aquisição', 'Encargos', 'Desocupação', 'Mensais', 'Venda'] as const
 
 interface LancamentoFormModalProps {
   oportunidades: { id: string; nome: string }[]

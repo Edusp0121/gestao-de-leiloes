@@ -42,8 +42,8 @@ export function getChecklistTargetField(
     }
   }
 
-  // Despesa - Tributos
-  if (cat.includes('tributo')) {
+  // Despesa - Encargos (suporta 'encargo' e legado 'tributo')
+  if (cat.includes('encargo') || cat.includes('tributo')) {
     if (desc.includes('itbi')) {
       return { field: 'data_pagamento_itbi' }
     }
