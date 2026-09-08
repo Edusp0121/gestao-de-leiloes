@@ -10,7 +10,19 @@ import {
   CheckCircle2,
   FileCheck,
   DollarSign,
+  RotateCcw,
 } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -35,6 +47,7 @@ import {
   toIdArray,
   canEditOp,
   canManageLancamentos,
+  canReabrirInvestimento,
   userRoleOnOp,
   getUsuarios,
   Oportunidade,
@@ -46,6 +59,7 @@ import {
   getFechamentoLancamentos,
   Fechamento,
   FechamentoLancamento,
+  reabrirInvestimento,
 } from '@/services/fechamentos'
 import { EncerramentoModal } from '@/components/EncerramentoModal'
 import { formatBRL, formatPercent, formatPercent1, formatDate } from '@/lib/formatters'
@@ -88,6 +102,7 @@ export default function OportunidadeDetalhe() {
   const [fechamento, setFechamento] = useState<Fechamento | null>(null)
   const [fechamentoLancamentos, setFechamentoLancamentos] = useState<FechamentoLancamento[]>([])
   const [modalEncerramentoOpen, setModalEncerramentoOpen] = useState(false)
+  const [reabrindo, setReabrindo] = useState(false)
   const [loading, setLoading] = useState(true)
   const [financingMethod, setFinancingMethod] = useState<'SAC' | 'PRICE'>('PRICE')
   const [categoryFilter, setCategoryFilter] = useState<ExpenseCategory | 'Todos'>('Todos')
@@ -245,6 +260,9 @@ export default function OportunidadeDetalhe() {
   const podeEditar = op ? canEditOp(op) : false
   const podeGerenciarLancamentos = op ? canManageLancamentos(op) : false
   const isObserver = op ? userRoleOnOp(op) === 'observer' : false
+  // Reabertura de investimento: apenas admin + dono (criador da oportunidade)
+  const role = op ? userRoleOnOp(op) : 'none'
+  const podeReabrir = role === 'admin' || role === 'creator'
 
   // Rateio de despesas por sócio usando a função compartilhada de calculator-utils.
   const rateioPorSocio = useMemo(() => {
@@ -269,6 +287,28 @@ export default function OportunidadeDetalhe() {
     .reduce((acc, l) => acc + l.valor, 0)
 
   const relatorioUrl = getRelatorioUrl(op)
+
+  const handleReabrirInvestimento = async () => {
+    if (!op) return
+    setReabrindo(true)
+    try {
+      await reabrirInvestimento(op.id)
+      toast({
+        title: 'Investimento Reaberto',
+        description: 'O fechamento foi removido e a oportunidade voltou para Em andamento.',
+      })
+      await loadData()
+    } catch (err: any) {
+      console.error('Erro ao reabrir investimento:', err)
+      toast({
+        title: 'Erro ao reabrir investimento',
+        description: err?.message || 'Não foi possível desfazer o encerramento.',
+        variant: 'destructive',
+      })
+    } finally {
+      setReabrindo(false)
+    }
+  }
 
   const handleDeleteLancamento = async (lancId: string) => {
     try {
@@ -436,14 +476,16 @@ export default function OportunidadeDetalhe() {
           </Link>
 
           {/* Botão/Badge: Ver Relatório Final se encerrada, ou Encerrar Investimento */}
-          {fechamento ? (
+          {fechamento || op.status === 'Vendida' ? (
             <div className="flex items-center gap-2">
-              <Link to={`/oportunidade/${op.id}/relatorio`}>
-                <Button className="bg-[#16A34A] hover:bg-[#15803D] text-white shadow-sm gap-2">
-                  <FileCheck className="w-4 h-4" /> Ver Relatório Final
-                </Button>
-              </Link>
-              {podeEditar && (
+              {fechamento && (
+                <Link to={`/oportunidade/${op.id}/relatorio`}>
+                  <Button className="bg-[#16A34A] hover:bg-[#15803D] text-white shadow-sm gap-2">
+                    <FileCheck className="w-4 h-4" /> Ver Relatório Final
+                  </Button>
+                </Link>
+              )}
+              {podeEditar && fechamento && (
                 <Button
                   variant="outline"
                   onClick={() => setModalEncerramentoOpen(true)}
@@ -451,6 +493,42 @@ export default function OportunidadeDetalhe() {
                 >
                   Editar Fechamento
                 </Button>
+              )}
+              {podeReabrir && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      disabled={reabrindo}
+                      className="border-amber-600 text-amber-700 hover:bg-amber-50 text-xs h-9 gap-1.5"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+                      {reabrindo ? 'Reabrindo...' : 'Reabrir Investimento'}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="bg-white border-[#EDE4D8]">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="text-[#5C3A21]">
+                        Reabrir Investimento?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="text-[#7A6A5A] text-sm">
+                        Isso excluirá o fechamento e os lançamentos de encerramento e devolverá o
+                        leilão para Andamento. Continuar?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="border-[#EDE4D8] text-[#5C3A21]">
+                        Cancelar
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleReabrirInvestimento}
+                        className="bg-amber-600 hover:bg-amber-700 text-white"
+                      >
+                        Confirmar e Reabrir
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
             </div>
           ) : (

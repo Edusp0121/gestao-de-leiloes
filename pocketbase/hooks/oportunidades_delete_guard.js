@@ -9,7 +9,7 @@
 // apenas dono e admin. Este hook complementa permitindo o PARTICIPANTE
 // somente quando a oportunidade não tem nenhum lançamento de despesa —
 // caso contrário o delete é bloqueado aqui.
-onRecordDeleteRequest('oportunidades').bind((e) => {
+onRecordDeleteRequest((e) => {
   const auth = e.auth
   if (!auth || !auth.id) {
     return e.json(403, { message: 'Não autenticado.' })
@@ -21,8 +21,7 @@ onRecordDeleteRequest('oportunidades').bind((e) => {
   // Admin (flag `admin` do usuário) ou dono: liberado pela própria API rule.
   const isAdmin = auth.getBool('admin')
   if (isAdmin || auth.id === donoId) {
-    e.next()
-    return
+    return e.next()
   }
 
   // Participante? (dono/admin já tratados acima; observador cai aqui e é barrado.)
@@ -70,5 +69,5 @@ onRecordDeleteRequest('oportunidades').bind((e) => {
     })
   }
 
-  e.next()
-}, $apis.requireAuth())
+  return e.next()
+}, 'oportunidades')

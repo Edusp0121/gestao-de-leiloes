@@ -170,3 +170,56 @@ export async function salvarFechamentoCompleto(
 
   return fechamento
 }
+
+/**
+ * Desfaz o encerramento da oportunidade:
+ * 1. Exclui todos os registros de fechamento_lancamentos
+ * 2. Exclui o registro de fechamento
+ * 3. Reverte o status da oportunidade para "Em andamento"
+ * 4. Zera/limpa o campo valor_venda_real da oportunidade
+ */
+export async function reabrirInvestimento(
+  oportunidadeId: string,
+  fechamentoId?: string,
+): Promise<void> {
+  let targetFechamentoId = fechamentoId
+  if (!targetFechamentoId) {
+    const fech = await getFechamentoByOportunidade(oportunidadeId)
+    if (fech) {
+      targetFechamentoId = fech.id
+    }
+  }
+
+  // 1. Excluir lançamentos de encerramento vinculados
+  try {
+    const filter = targetFechamentoId
+      ? `fechamento = '${targetFechamentoId}' || oportunidade = '${oportunidadeId}'`
+      : `oportunidade = '${oportunidadeId}'`
+
+    const itens = await pb.collection('fechamento_lancamentos').getFullList({
+      filter,
+      fields: 'id',
+      requestKey: null,
+    })
+    for (const item of itens) {
+      await pb.collection('fechamento_lancamentos').delete(item.id)
+    }
+  } catch (err) {
+    console.warn('Erro ao excluir fechamento_lancamentos ao reabrir investimento:', err)
+  }
+
+  // 2. Excluir registro do fechamento
+  if (targetFechamentoId) {
+    try {
+      await pb.collection('fechamentos').delete(targetFechamentoId)
+    } catch (err) {
+      console.warn('Erro ao excluir fechamento ao reabrir investimento:', err)
+    }
+  }
+
+  // 3 e 4. Reverte status da oportunidade para "Em andamento" e zera valor_venda_real
+  await pb.collection('oportunidades').update(oportunidadeId, {
+    status: 'Em andamento',
+    valor_venda_real: 0,
+  })
+}

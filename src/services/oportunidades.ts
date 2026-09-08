@@ -164,6 +164,15 @@ export function canDeleteOp(
 }
 
 /**
+ * Pode reabrir o investimento: apenas dono (criador) ou administrador.
+ * Participantes e observadores não podem.
+ */
+export function canReabrirInvestimento(op: Oportunidade): boolean {
+  const role = userRoleOnOp(op)
+  return role === 'admin' || role === 'creator'
+}
+
+/**
  * Pode criar/editar/excluir lançamentos: admin, criador ou participante.
  * Observadores não.
  */
