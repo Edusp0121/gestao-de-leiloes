@@ -322,7 +322,15 @@
     display: flex !important;
   }
 
-  /* Ajusta containers para fluxo de página e evita quebras feias */
+  /* Ajusta containers para fluxo de página e esconde navegação/chrome do app */
+  aside,
+  header,
+  nav,
+  .sidebar,
+  [data-sidebar] {
+    display: none !important;
+  }
+
   main,
   .container {
     width: 100% !important;

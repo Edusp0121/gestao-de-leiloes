@@ -9,16 +9,16 @@ export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
-    <div className="min-h-screen flex bg-[#FAF7F2]">
+    <div className="min-h-screen flex bg-[#FAF7F2] print:bg-white">
       {/* Desktop Sidebar */}
-      <div className="hidden md:block w-[260px] shrink-0">
+      <div className="hidden md:block w-[260px] shrink-0 print:hidden">
         <Sidebar />
       </div>
 
       {/* Main Container */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 print:w-full print:p-0">
         {/* Mobile Header */}
-        <header className="md:hidden flex items-center justify-between bg-[#2D1B0E] px-4 py-3 text-white border-b border-[#5C3A21] sticky top-0 z-40">
+        <header className="md:hidden flex items-center justify-between bg-[#2D1B0E] px-4 py-3 text-white border-b border-[#5C3A21] sticky top-0 z-40 print:hidden">
           <div className="flex items-center gap-2">
             <img
               src={logoImg}

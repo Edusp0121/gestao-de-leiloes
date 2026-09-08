@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-03T12:16:47.069Z",
+  "generatedAt": "2026-09-08T15:26:55.669Z",
   "collections": [
     {
       "name": "users",
@@ -518,10 +518,10 @@
       "name": "checklists",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes = @request.auth.id || oportunidade.observadores = @request.auth.id || @request.auth.admin = true)",
-        "view": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes = @request.auth.id || oportunidade.observadores = @request.auth.id || @request.auth.admin = true)",
-        "create": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes = @request.auth.id || @request.auth.admin = true)",
-        "update": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes = @request.auth.id || @request.auth.admin = true)",
+        "list": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || oportunidade.observadores ~ @request.auth.id || @request.auth.admin = true)",
+        "view": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || oportunidade.observadores ~ @request.auth.id || @request.auth.admin = true)",
+        "create": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || @request.auth.admin = true)",
+        "update": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || @request.auth.admin = true)",
         "delete": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || @request.auth.admin = true)"
       },
       "fields": [
@@ -710,6 +710,155 @@
         }
       ],
       "indexes": ["CREATE UNIQUE INDEX idx_checklists_oportunidade ON checklists (oportunidade)"]
+    },
+    {
+      "name": "fechamentos",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || oportunidade.observadores ~ @request.auth.id || @request.auth.admin = true)",
+        "view": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || oportunidade.observadores ~ @request.auth.id || @request.auth.admin = true)",
+        "create": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || @request.auth.admin = true)",
+        "update": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || @request.auth.admin = true)",
+        "delete": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || @request.auth.admin = true)"
+      },
+      "fields": [
+        {
+          "name": "oportunidade",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "oportunidades"
+        },
+        {
+          "name": "data_venda",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "valor_real_negociado",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "desagio",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "custos_reais_categoria",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "observacoes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_fechamentos_oportunidade ON fechamentos (oportunidade)"]
+    },
+    {
+      "name": "fechamento_lancamentos",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || oportunidade.observadores ~ @request.auth.id || @request.auth.admin = true)",
+        "view": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || oportunidade.observadores ~ @request.auth.id || @request.auth.admin = true)",
+        "create": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || @request.auth.admin = true)",
+        "update": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || @request.auth.admin = true)",
+        "delete": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || @request.auth.admin = true)"
+      },
+      "fields": [
+        {
+          "name": "fechamento",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "fechamentos"
+        },
+        {
+          "name": "oportunidade",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "oportunidades"
+        },
+        {
+          "name": "data",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "descricao",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "tipo",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "entrada",
+            "parcela",
+            "financiamento",
+            "lance",
+            "leiloeiro",
+            "ITBI",
+            "escritura",
+            "registro",
+            "contato ocupante",
+            "desocupacao",
+            "reforma",
+            "venda",
+            "outro"
+          ]
+        },
+        {
+          "name": "valor",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_fechamento_lanc_fechamento ON fechamento_lancamentos (fechamento)",
+        "CREATE INDEX idx_fechamento_lanc_oportunidade ON fechamento_lancamentos (oportunidade)"
+      ]
     }
   ]
 }

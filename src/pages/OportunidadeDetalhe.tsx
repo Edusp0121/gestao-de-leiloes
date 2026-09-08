@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Download, ArrowLeft, Trash2, Award, Eye, CalendarCheck } from 'lucide-react'
+import {
+  Download,
+  ArrowLeft,
+  Trash2,
+  Award,
+  Eye,
+  CalendarCheck,
+  CheckCircle2,
+  FileCheck,
+  DollarSign,
+} from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -31,6 +41,13 @@ import {
 } from '@/services/oportunidades'
 import { getLancamentos, deleteLancamento, Lancamento } from '@/services/lancamentos'
 import { getChecklistByOportunidade, Checklist } from '@/services/checklists'
+import {
+  getFechamentoByOportunidade,
+  getFechamentoLancamentos,
+  Fechamento,
+  FechamentoLancamento,
+} from '@/services/fechamentos'
+import { EncerramentoModal } from '@/components/EncerramentoModal'
 import { formatBRL, formatPercent, formatPercent1, formatDate } from '@/lib/formatters'
 import { StatusBadge } from '@/components/StatusBadge'
 import { LancamentoFormModal } from '@/components/LancamentoFormModal'
@@ -68,6 +85,9 @@ export default function OportunidadeDetalhe() {
   const [allOps, setAllOps] = useState<Oportunidade[]>([])
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([])
   const [checklist, setChecklist] = useState<Checklist | null>(null)
+  const [fechamento, setFechamento] = useState<Fechamento | null>(null)
+  const [fechamentoLancamentos, setFechamentoLancamentos] = useState<FechamentoLancamento[]>([])
+  const [modalEncerramentoOpen, setModalEncerramentoOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [financingMethod, setFinancingMethod] = useState<'SAC' | 'PRICE'>('PRICE')
   const [categoryFilter, setCategoryFilter] = useState<ExpenseCategory | 'Todos'>('Todos')
@@ -76,16 +96,25 @@ export default function OportunidadeDetalhe() {
   const loadData = async () => {
     if (!id) return
     try {
-      const [item, lans, list, check] = await Promise.all([
+      const [item, lans, list, check, fech] = await Promise.all([
         getOportunidade(id),
         getLancamentos(id),
         getOportunidades(),
         getChecklistByOportunidade(id),
+        getFechamentoByOportunidade(id),
       ])
       setOp(item)
       setLancamentos(lans)
       setAllOps(list)
       setChecklist(check)
+      setFechamento(fech)
+
+      if (fech) {
+        const fechLans = await getFechamentoLancamentos(fech.id)
+        setFechamentoLancamentos(fechLans)
+      } else {
+        setFechamentoLancamentos([])
+      }
     } catch {
       toast({ title: 'Erro', description: 'Oportunidade não encontrada.', variant: 'destructive' })
     } finally {
@@ -405,6 +434,36 @@ export default function OportunidadeDetalhe() {
               <CalendarCheck className="w-4 h-4" /> Checklist Pós-Arrematação
             </Button>
           </Link>
+
+          {/* Botão/Badge: Ver Relatório Final se encerrada, ou Encerrar Investimento */}
+          {fechamento ? (
+            <div className="flex items-center gap-2">
+              <Link to={`/oportunidade/${op.id}/relatorio`}>
+                <Button className="bg-[#16A34A] hover:bg-[#15803D] text-white shadow-sm gap-2">
+                  <FileCheck className="w-4 h-4" /> Ver Relatório Final
+                </Button>
+              </Link>
+              {podeEditar && (
+                <Button
+                  variant="outline"
+                  onClick={() => setModalEncerramentoOpen(true)}
+                  className="border-[#16A34A] text-[#16A34A] hover:bg-[#DCFCE7] text-xs h-9"
+                >
+                  Editar Fechamento
+                </Button>
+              )}
+            </div>
+          ) : (
+            podeEditar && (
+              <Button
+                onClick={() => setModalEncerramentoOpen(true)}
+                className="bg-[#5C3A21] hover:bg-[#432A18] text-white shadow-sm gap-2"
+              >
+                <DollarSign className="w-4 h-4 text-[#F97316]" /> Encerrar Investimento
+              </Button>
+            )
+          )}
+
           {relatorioUrl && (
             <a href={relatorioUrl} target="_blank" rel="noreferrer">
               <Button
@@ -768,6 +827,17 @@ export default function OportunidadeDetalhe() {
           )}
         </CardContent>
       </Card>
+      {/* Modal de Encerramento */}
+      <EncerramentoModal
+        open={modalEncerramentoOpen}
+        onOpenChange={setModalEncerramentoOpen}
+        oportunidade={op}
+        checklist={checklist}
+        lancamentos={lancamentos}
+        fechamentoExistente={fechamento}
+        fechamentoLancamentosExistentes={fechamentoLancamentos}
+        onSuccess={loadData}
+      />
     </div>
   )
 }
