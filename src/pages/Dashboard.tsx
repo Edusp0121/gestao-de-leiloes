@@ -40,7 +40,7 @@ import {
 } from '@/components/ui/select'
 import {
   getOportunidades,
-  deleteOportunidade,
+  softDeleteOportunidade,
   canEditOp,
   canDeleteOp,
   Oportunidade,
@@ -105,8 +105,12 @@ export default function Dashboard() {
     if (!deletingId) return
     const opId = deletingId
     try {
-      await deleteOportunidade(opId)
-      toast({ title: 'Excluída', description: 'Oportunidade e lançamentos removidos.' })
+      await softDeleteOportunidade(opId)
+      toast({
+        title: 'Oportunidade excluída',
+        description:
+          'A oportunidade foi enviada para a lixeira. Um administrador pode restaurá-la a qualquer momento.',
+      })
       setDeletingId(null)
       setDeleteDialogOpen(false)
       await loadData()
@@ -595,8 +599,9 @@ export default function Dashboard() {
                                     <AlertDialogHeader>
                                       <AlertDialogTitle>Excluir oportunidade</AlertDialogTitle>
                                       <AlertDialogDescription>
-                                        Tem certeza que deseja excluir esta oportunidade? Todos os
-                                        lançamentos associados também serão removidos.
+                                        Tem certeza que deseja mover esta oportunidade para a
+                                        lixeira? Ela sairá das listagens e painéis, mas poderá ser
+                                        restaurada por um administrador.
                                       </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>

@@ -60,6 +60,7 @@ export interface Oportunidade {
   valor_prefeitura_venal?: number
   valor_venda_real?: number | null
   valor_venda_com_desconto?: number
+  deleted_at?: string | null
   maior_lucro_esperado?: number
   retorno_estimado?: number
   roi_esperado_periodo?: number
@@ -181,10 +182,23 @@ export function canManageLancamentos(op: Oportunidade): boolean {
   return role === 'admin' || role === 'creator' || role === 'participant'
 }
 
-export const getOportunidades = () =>
-  pb.collection('oportunidades').getFullList<Oportunidade>({
+export const getOportunidades = (options?: { includeDeleted?: boolean }) => {
+  // Por padrão, esconde oportunidades com deleted_at preenchido.
+  // Usuários não-admin já são filtrados pela listRule (deleted_at = "").
+  // Para admin, isso assegura que listas normais de telas nunca mostrem excluídas.
+  const filter = options?.includeDeleted ? undefined : 'deleted_at = ""'
+  return pb.collection('oportunidades').getFullList<Oportunidade>({
     sort: '-created',
     expand: 'usuario,participantes,observadores',
+    filter,
+  })
+}
+
+export const getOportunidadesExcluidas = () =>
+  pb.collection('oportunidades').getFullList<Oportunidade>({
+    sort: '-deleted_at',
+    expand: 'usuario,participantes,observadores',
+    filter: 'deleted_at != ""',
   })
 
 export const getOportunidade = (id: string) =>
@@ -224,7 +238,31 @@ export const updateOportunidade = (id: string, data: Partial<Oportunidade> | For
   return pb.collection('oportunidades').update<Oportunidade>(id, payload)
 }
 
-export const deleteOportunidade = (id: string) => pb.collection('oportunidades').delete(id)
+/**
+ * Soft delete: marca deleted_at com o timestamp atual.
+ * A oportunidade desaparece de todas as listagens normais mas pode ser restaurada pelo admin.
+ */
+export const softDeleteOportunidade = (id: string) =>
+  pb.collection('oportunidades').update<Oportunidade>(id, {
+    deleted_at: new Date().toISOString(),
+  })
+
+/**
+ * Restauração: limpa deleted_at (exclusivo para administradores).
+ */
+export const restoreOportunidade = (id: string) =>
+  pb.collection('oportunidades').update<Oportunidade>(id, {
+    deleted_at: null,
+  })
+
+/**
+ * Hard delete (exclusão definitiva): ação exclusiva de administrador.
+ */
+export const deleteOportunidadeDefinitiva = (id: string) =>
+  pb.collection('oportunidades').delete(id)
+
+// Mantido para compatibilidade, aponta para softDeleteOportunidade
+export const deleteOportunidade = softDeleteOportunidade
 
 export const getRelatorioUrl = (record: Oportunidade) => {
   if (!record.relatorio_viabilidade) return null
