@@ -88,6 +88,7 @@ import {
   calcRoiAnual,
   getSociosParticipantesOp,
   calcRateioDespesasPorSocioOp,
+  calcLanceTetoInverso,
 } from '@/lib/calculator-utils'
 import { primeiraLetraNome } from '@/lib/participantes-utils'
 import { Badge } from '@/components/ui/badge'
@@ -275,6 +276,48 @@ export default function OportunidadeDetalhe() {
     [lancamentos],
   )
 
+  const annualRate =
+    op && op.taxa_juros_financiamento && op.taxa_juros_financiamento > 0
+      ? op.taxa_juros_financiamento
+      : 8
+
+  // Cálculo inverso do Lance Teto com base no ROI-alvo
+  const lanceTetoCalculado = useMemo(() => {
+    if (!op) return null
+    return calcLanceTetoInverso({
+      valor_mercado: op.valor_mercado,
+      valor_arrematacao: op.valor_arrematacao,
+      desagio_venda: op.desagio_venda,
+      tempo_estimado_venda_meses: op.tempo_estimado_venda_meses,
+      itbi_percent: op.itbi_percent,
+      comissao_leiloeiro_percent: op.comissao_leiloeiro_percent,
+      comissao_corretor_percent: op.comissao_corretor_percent,
+      escritura: op.escritura,
+      registro: op.registro,
+      averbacao: op.averbacao,
+      reforma_prevista: op.reforma_prevista,
+      assessoria_juridica: op.assessoria_juridica,
+      condominio_iptu_mensal: op.condominio_iptu_mensal,
+      dividas_condominio: op.dividas_condominio,
+      dividas_iptu: op.dividas_iptu,
+      ir_percent: op.ir_percent,
+      incluir_ir_despesas: op.incluir_ir_despesas,
+      taxa_avaliacao: op.taxa_avaliacao,
+      taxas_judiciais: op.taxas_judiciais,
+      acordo_desocupacao: op.acordo_desocupacao,
+      baixa_gravames: op.baixa_gravames,
+      foro: op.foro,
+      valor_prefeitura_venal: op.valor_prefeitura_venal,
+      roi_alvo: op.roi_alvo,
+      modalidade_financiamento: financingMethod,
+      taxa_juros_financiamento: annualRate,
+      prazo_financiamento: op.prazo_financiamento,
+      parcelas_pagas: op.parcelas_pagas,
+      percentual_entrada: op.percentual_entrada,
+      indice_correcao_medio_mensal: op.indice_correcao_medio_mensal,
+    })
+  }, [op, financingMethod, annualRate])
+
   if (loading || !op) {
     return <div className="py-12 text-center text-[#7A6A5A]">Carregando detalhes...</div>
   }
@@ -337,8 +380,6 @@ export default function OportunidadeDetalhe() {
     Real: Math.round((realCosts[cat] ?? 0) * 100) / 100,
   }))
 
-  const annualRate =
-    op.taxa_juros_financiamento && op.taxa_juros_financiamento > 0 ? op.taxa_juros_financiamento : 8
   const financingParams: FinancingParams = {
     principal: op.valor_arrematacao || 101200,
     annualRate: annualRate,
@@ -607,7 +648,7 @@ export default function OportunidadeDetalhe() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card className="bg-white border-[#EDE4D8]">
           <CardContent className="pt-4 space-y-2">
             <div>
@@ -669,6 +710,66 @@ export default function OportunidadeDetalhe() {
                 ? `Venda Real (${formatBRL(valorVendaRealUsado)}) − Despesas (${formatBRL(despesasReaisDivisor)})`
                 : `Venda Estimada (${formatBRL(valorEstimadoVenda)}) − Despesas (${formatBRL(despesasReaisDivisor)})`}
             </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-white border-[#EDE4D8] flex flex-col justify-between">
+          <CardContent className="pt-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-[#7A6A5A] uppercase font-semibold">Lance Teto Máximo</p>
+              {op.roi_alvo ? (
+                <Badge
+                  variant="outline"
+                  className="text-[#8B5A2B] border-[#EDE4D8] font-bold text-[10px]"
+                >
+                  Meta: {op.roi_alvo}%
+                </Badge>
+              ) : null}
+            </div>
+            {lanceTetoCalculado?.atingivel && lanceTetoCalculado.lanceTeto !== null ? (
+              <>
+                <p className="text-2xl font-bold text-[#8B5A2B] mt-1">
+                  {formatBRL(lanceTetoCalculado.lanceTeto)}
+                </p>
+                <div className="pt-2 border-t border-[#EDE4D8]/60 space-y-1 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#7A6A5A]">ROI no Teto:</span>
+                    <span className="font-bold text-[#16A34A]">
+                      {lanceTetoCalculado.roiObtidoNoTeto !== undefined
+                        ? formatPercent1(lanceTetoCalculado.roiObtidoNoTeto)
+                        : '—'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#7A6A5A]">Lucro no Teto:</span>
+                    <span className="font-semibold text-[#5C3A21]">
+                      {lanceTetoCalculado.lucroEsperadoNoTeto !== undefined
+                        ? formatBRL(lanceTetoCalculado.lucroEsperadoNoTeto)
+                        : '—'}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-[#7A6A5A] pt-1">
+                  Maior arrematação possível considerando todos os custos estimados.
+                </p>
+              </>
+            ) : (
+              <div className="py-2">
+                <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-lg p-3 text-xs space-y-1">
+                  <p className="font-semibold">Aviso de Viabilidade</p>
+                  <p className="text-amber-800">
+                    {lanceTetoCalculado?.motivo ||
+                      'Não há lance que alcance o ROI-alvo com os parâmetros atuais.'}
+                  </p>
+                </div>
+                {!op.roi_alvo && podeEditar && (
+                  <Link to={`/nova-analise/${op.id}`}>
+                    <Button variant="link" className="p-0 h-auto text-xs text-[#F97316] mt-2">
+                      Definir ROI-alvo na edição →
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

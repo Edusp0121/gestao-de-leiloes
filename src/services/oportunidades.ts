@@ -65,6 +65,7 @@ export interface Oportunidade {
   retorno_estimado?: number
   roi_esperado_periodo?: number
   roi_esperado_anualizado?: number
+  roi_alvo?: number
   lance_teto?: number
   relatorio_viabilidade?: string
   custos_estimados_planilha?: string | Record<string, number> | null

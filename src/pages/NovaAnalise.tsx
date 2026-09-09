@@ -132,6 +132,7 @@ const DEFAULT_FORM = {
   foro: 0,
   dividas_condominio: 0,
   dividas_iptu: 0,
+  roi_alvo: '' as number | string,
 }
 
 function formFromOportunidade(op: Oportunidade) {
@@ -205,6 +206,15 @@ export default function NovaAnalise() {
               }
             })
         }
+        // Se a taxa de juros estiver zerada/vazia, preenche automaticamente com a do agente selecionado
+        if (!Number(loadedForm.taxa_juros_financiamento)) {
+          const taxaSugerida =
+            TAXAS_JUROS_AGENTES[loadedForm.banco_selecionado] ?? TAXAS_JUROS_AGENTES['Caixa Balcão']
+          if (taxaSugerida !== undefined) {
+            loadedForm.taxa_juros_financiamento = taxaSugerida
+          }
+        }
+
         setForm(loadedForm)
         // Sempre trata participantes/observadores como arrays.
         const parts = toIdArray(op.participantes)
@@ -294,6 +304,18 @@ export default function NovaAnalise() {
   }
 
   const handleChange = (field: string, value: any) => {
+    if (field === 'roi_alvo') {
+      const numVal = Number(value)
+      if (value !== '' && (isNaN(numVal) || numVal <= 0)) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          roi_alvo: 'O ROI-alvo deve ser um percentual positivo maior que zero.',
+        }))
+      } else {
+        setFieldErrors((prev) => ({ ...prev, roi_alvo: '' }))
+      }
+    }
+
     setForm((prev) => {
       const next = { ...prev, [field]: value }
 
@@ -368,6 +390,13 @@ export default function NovaAnalise() {
       baixa_gravames: Number(form.baixa_gravames),
       foro: Number(form.foro),
       valor_prefeitura_venal: Number(form.valor_prefeitura_venal),
+      roi_alvo: form.roi_alvo !== '' && form.roi_alvo != null ? Number(form.roi_alvo) : undefined,
+      modalidade_financiamento: form.modalidade_financiamento,
+      taxa_juros_financiamento: Number(form.taxa_juros_financiamento) || 11.49,
+      prazo_financiamento: Number(form.prazo_financiamento) || 120,
+      parcelas_pagas: Number(form.parcelas_pagas) || 0,
+      percentual_entrada: Number(form.percentual_entrada) || 10,
+      indice_correcao_medio_mensal: Number(form.indice_correcao_medio_mensal) || 0,
     }),
     valor_parcela_mensal: 0,
     saldo_devedor: 0,
@@ -400,6 +429,22 @@ export default function NovaAnalise() {
         variant: 'destructive',
       })
       return
+    }
+
+    if (form.roi_alvo !== '' && form.roi_alvo != null) {
+      const roiNum = Number(form.roi_alvo)
+      if (isNaN(roiNum) || roiNum <= 0) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          roi_alvo: 'O ROI-alvo deve ser um percentual positivo maior que zero.',
+        }))
+        toast({
+          title: 'Validação',
+          description: 'O ROI-alvo deve ser um percentual positivo.',
+          variant: 'destructive',
+        })
+        return
+      }
     }
 
     setLoading(true)
@@ -450,6 +495,7 @@ export default function NovaAnalise() {
             form.valor_venda_real !== '' && form.valor_venda_real != null
               ? Number(form.valor_venda_real)
               : null,
+          roi_alvo: form.roi_alvo !== '' && form.roi_alvo != null ? Number(form.roi_alvo) : null,
           ...computed,
           participantes: participantes,
           observadores: observadores,
@@ -674,6 +720,27 @@ export default function NovaAnalise() {
               onChange={(e) => handleChange('valor_arrematacao', e.target.value)}
             />
             {numericFieldError('valor_arrematacao')}
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-[#5C3A21] font-semibold">ROI-alvo (%)</Label>
+              <span className="text-[11px] text-[#7A6A5A] font-medium">Meta mínima</span>
+            </div>
+            <Input
+              type="number"
+              step="0.1"
+              min="0.1"
+              placeholder="Ex: 25 (ROI mínimo desejado)"
+              value={form.roi_alvo}
+              onChange={(e) => handleChange('roi_alvo', e.target.value)}
+              className={fieldErrors.roi_alvo ? 'border-red-500 ring-red-500' : ''}
+            />
+            <p className="text-xs text-[#7A6A5A]">
+              Usado para o cálculo inverso do Lance Teto e meta no Relatório Final.
+            </p>
+            {fieldErrors.roi_alvo ? (
+              <p className="text-xs text-red-500 font-medium">{fieldErrors.roi_alvo}</p>
+            ) : null}
           </div>
           <div className="space-y-2">
             <Label>Deságio para Venda (%)</Label>
@@ -1038,9 +1105,27 @@ export default function NovaAnalise() {
                 {formatPercent(computed.roi_esperado_periodo)}
               </p>
             </div>
-            <div className="p-3 bg-white rounded-lg border border-[#EDE4D8]">
-              <p className="text-xs text-[#7A6A5A]">Lance Teto Recomendado</p>
-              <p className="text-lg font-bold text-[#8B5A2B]">{formatBRL(computed.lance_teto)}</p>
+            <div className="p-3 bg-white rounded-lg border border-[#EDE4D8] flex flex-col justify-between">
+              <div>
+                <p className="text-xs text-[#7A6A5A] font-semibold">Lance Teto Máximo</p>
+                <p className="text-[10px] text-[#7A6A5A]">
+                  {form.roi_alvo
+                    ? `p/ atingir ROI-alvo ${form.roi_alvo}%`
+                    : 'informe o ROI-alvo para calcular'}
+                </p>
+              </div>
+              <div className="mt-2">
+                {computed.lance_teto_atingivel && computed.lance_teto !== null ? (
+                  <p className="text-lg font-bold text-[#8B5A2B]">
+                    {formatBRL(computed.lance_teto)}
+                  </p>
+                ) : (
+                  <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded p-1.5 text-xs">
+                    {computed.lance_teto_motivo ||
+                      'Não há lance que alcance o ROI-alvo com os parâmetros atuais.'}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>

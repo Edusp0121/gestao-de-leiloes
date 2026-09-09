@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-08T20:10:38.046Z",
+  "generatedAt": "2026-09-09T19:25:16.378Z",
   "collections": [
     {
       "name": "users",
@@ -39,8 +39,8 @@
           "autodateTriggers": ["onCreate", "onUpdate"]
         },
         {
-          "name": "admin",
-          "type": "bool",
+          "name": "deleted_at",
+          "type": "date",
           "required": false,
           "system": false
         }
@@ -427,6 +427,12 @@
         {
           "name": "deleted_at",
           "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "roi_alvo",
+          "type": "number",
           "required": false,
           "system": false
         }

@@ -1,4 +1,8 @@
-import { calculateSaldoDevedor, type FinancingParams } from './financing-utils'
+import {
+  calculateInstallment,
+  calculateSaldoDevedor,
+  type FinancingParams,
+} from './financing-utils'
 import { getEstimatedCostsByCategory } from './expense-categories'
 import { primeiraLetraNome, sociosCobertosPorMarca } from './participantes-utils'
 import { toIdArray, type Oportunidade, type UserRef } from '@/services/oportunidades'
@@ -30,6 +34,219 @@ export interface CalculatorInputs {
   emolumentos?: number
   valor_prefeitura_venal?: number
   uf?: string
+  roi_alvo?: number
+  modalidade_financiamento?: 'À Vista' | 'SAC' | 'PRICE' | string
+  taxa_juros_financiamento?: number
+  prazo_financiamento?: number
+  parcelas_pagas?: number
+  percentual_entrada?: number
+  indice_correcao_medio_mensal?: number
+  saldo_devedor?: number
+}
+
+export interface LanceTetoResult {
+  lanceTeto: number | null
+  atingivel: boolean
+  motivo?: string
+  lucroEsperadoNoTeto?: number
+  capitalNecessarioNoTeto?: number
+  roiObtidoNoTeto?: number
+}
+
+/**
+ * Calcula o Lance Teto através da CONTA INVERSA:
+ * Dado o ROI-alvo mínimo aceitável informado pelo usuário (%), calcula o maior
+ * lance de arrematação possível em que:
+ *   Lucro Esperado ÷ Capital Necessário ≥ ROI-alvo
+ * considerando TODOS os custos estimados:
+ *   - Leiloeiro (% do lance)
+ *   - Entrada (% do lance se financiado, ou 100% se à vista)
+ *   - Prestações durante o período de venda (se financiado)
+ *   - ITBI (com base em valor venal ou arrematação)
+ *   - Escritura, registro, averbação
+ *   - Reforma, assessoria jurídica, desocupação, taxas judiciais, foro, baixa gravames, taxa avaliação
+ *   - Condomínio + IPTU mensal × meses + dívidas de condomínio/IPTU
+ *   - Comissão de venda (corretor) sobre o valor de venda
+ *   - Saldo devedor do financiamento remanescente na quitação da venda
+ *
+ * Se não houver lance positivo (>= 0) que atinja o ROI-alvo, retorna lanceTeto: null e atingivel: false.
+ */
+export function calcLanceTetoInverso(inputs: CalculatorInputs): LanceTetoResult {
+  const roiAlvo = inputs.roi_alvo != null ? Number(inputs.roi_alvo) : null
+  if (roiAlvo === null || isNaN(roiAlvo) || roiAlvo <= 0) {
+    return {
+      lanceTeto: null,
+      atingivel: false,
+      motivo: 'Informe um ROI-alvo (%) positivo para calcular o Lance Teto.',
+    }
+  }
+
+  const valorMercado = Number(inputs.valor_mercado) || 0
+  const desagio = Number(inputs.desagio_venda) || 0
+  const valorVendaComDesconto = valorMercado * (1 - desagio / 100)
+
+  if (valorVendaComDesconto <= 0) {
+    return {
+      lanceTeto: null,
+      atingivel: false,
+      motivo: 'Valor estimado de venda inválido.',
+    }
+  }
+
+  // Função interna que avalia se uma dada arrematação atinge o ROI-alvo
+  // e retorna { lucro, capital, roi }
+  const avaliarArrematacao = (arrematacaoTentativa: number) => {
+    const comissaoLeiloeiroPct = Number(inputs.comissao_leiloeiro_percent) || 5
+    const itbiPct = Number(inputs.itbi_percent) || 3
+    const comissaoCorretorPct = Number(inputs.comissao_corretor_percent) || 6
+    const tempoMeses = Number(inputs.tempo_estimado_venda_meses) || 10
+    const irPct = Number(inputs.ir_percent) || 15
+    const incluirIR = inputs.incluir_ir_despesas !== false
+
+    const modalidade = inputs.modalidade_financiamento || 'PRICE'
+    const isFinanciado =
+      modalidade !== 'À Vista' &&
+      (Number(inputs.prazo_financiamento) > 0 || Number(inputs.saldo_devedor) > 0)
+
+    const percentualEntrada =
+      inputs.percentual_entrada == null || Number(inputs.percentual_entrada) === 0
+        ? isFinanciado
+          ? 10
+          : 0
+        : Number(inputs.percentual_entrada)
+
+    const sinal = isFinanciado
+      ? (percentualEntrada / 100) * arrematacaoTentativa
+      : percentualEntrada > 0
+        ? (percentualEntrada / 100) * arrematacaoTentativa
+        : arrematacaoTentativa
+
+    const leiloeiro = arrematacaoTentativa * (comissaoLeiloeiroPct / 100)
+    const aquisicao = sinal + leiloeiro
+
+    const valorVenal = Number(inputs.valor_prefeitura_venal) || 0
+    const valorBaseITBI = valorVenal > 0 ? valorVenal : arrematacaoTentativa
+    const itbi = valorBaseITBI * (itbiPct / 100)
+    const escritura = Number(inputs.escritura) || 0
+    const registro = Number(inputs.registro) || 0
+    const averbacao = Number(inputs.averbacao) || 0
+    const encargos = itbi + escritura + registro + averbacao
+
+    const reforma = Number(inputs.reforma_prevista) || 0
+    const assessoria = Number(inputs.assessoria_juridica) || 0
+    const acordoDesocupacao = Number(inputs.acordo_desocupacao) || 0
+    const taxasJudiciais = Number(inputs.taxas_judiciais) || 0
+    const taxaAvaliacao = Number(inputs.taxa_avaliacao) || 0
+    const baixaGravames = Number(inputs.baixa_gravames) || 0
+    const foro = Number(inputs.foro) || 0
+    const desocupacao =
+      reforma +
+      assessoria +
+      acordoDesocupacao +
+      taxasJudiciais +
+      taxaAvaliacao +
+      baixaGravames +
+      foro
+
+    const condominioIptu = Number(inputs.condominio_iptu_mensal) || 0
+    const dividasCondominio = Number(inputs.dividas_condominio) || 0
+    const dividasIptu = Number(inputs.dividas_iptu) || 0
+
+    let prestacoesPagas = 0
+    let saldoDevedor = 0
+
+    if (isFinanciado) {
+      const annualRate = Number(inputs.taxa_juros_financiamento) || 11.49
+      const prazoFinanciamento = Number(inputs.prazo_financiamento) || 120
+      const parcelasPagasCount = Number(inputs.parcelas_pagas) || 0
+      const correcaoMensal = Number(inputs.indice_correcao_medio_mensal) || 0
+
+      const financingParams: FinancingParams = {
+        principal: arrematacaoTentativa,
+        annualRate,
+        termMonths: prazoFinanciamento,
+        paymentsMade: parcelasPagasCount,
+        method: modalidade === 'SAC' ? 'SAC' : 'PRICE',
+        entryPercent: percentualEntrada,
+        correcaoMensal,
+      }
+
+      const valorParcelaCalc = calculateInstallment(financingParams)
+      prestacoesPagas = valorParcelaCalc * tempoMeses
+      saldoDevedor = calculateSaldoDevedor(financingParams)
+    }
+
+    const mensais = prestacoesPagas + condominioIptu * tempoMeses + dividasCondominio + dividasIptu
+
+    const comissaoCorretor = valorVendaComDesconto * (comissaoCorretorPct / 100)
+
+    // Capital Necessário estimado das categorias = Aquisição + Encargos + Desocupação + Mensais
+    const capitalNecessario = aquisicao + encargos + desocupacao + mensais
+
+    // Ganho de Capital / Lucro = Valor Venda - Comissão Corretor - Despesas - Saldo Devedor
+    const ganhoCapitalBase =
+      valorVendaComDesconto - comissaoCorretor - capitalNecessario - saldoDevedor
+
+    const irValor = incluirIR ? Math.max(0, ganhoCapitalBase * (irPct / 100)) : 0
+    const maiorLucroEsperado = ganhoCapitalBase - irValor
+
+    const roiObtido = capitalNecessario > 0 ? (maiorLucroEsperado / capitalNecessario) * 100 : -100
+
+    return {
+      capitalNecessario,
+      saldoDevedor,
+      maiorLucroEsperado,
+      roiObtido,
+    }
+  }
+
+  // Busca binária para encontrar a maior arrematação (>= 0) em que roiObtido >= roiAlvo
+  // Intervalo inicial de arrematação: [0, valorVendaComDesconto * 2]
+  let low = 0
+  let high = Math.max(valorVendaComDesconto * 1.5, 1000000)
+
+  // Testa se mesmo com lance 0 o ROI-alvo é inatingível
+  const avaliacaoZero = avaliarArrematacao(0)
+  if (avaliacaoZero.roiObtido < roiAlvo) {
+    return {
+      lanceTeto: null,
+      atingivel: false,
+      motivo: 'Não há lance que alcance o ROI-alvo com os parâmetros atuais.',
+      roiObtidoNoTeto: avaliacaoZero.roiObtido,
+    }
+  }
+
+  // Busca binária de precisão centesimal (100 iterações garantem < 0.01 centavo de erro)
+  for (let i = 0; i < 60; i++) {
+    const mid = (low + high) / 2
+    const res = avaliarArrematacao(mid)
+    if (res.roiObtido >= roiAlvo) {
+      // mid ainda atinge o ROI-alvo, podemos tentar lance maior
+      low = mid
+    } else {
+      // mid ficou abaixo do ROI-alvo, lance máximo deve ser menor
+      high = mid
+    }
+  }
+
+  const lanceFinal = Math.floor(low * 100) / 100
+  if (lanceFinal <= 0) {
+    return {
+      lanceTeto: null,
+      atingivel: false,
+      motivo: 'Não há lance que alcance o ROI-alvo com os parâmetros atuais.',
+    }
+  }
+
+  const metricasFinais = avaliarArrematacao(lanceFinal)
+
+  return {
+    lanceTeto: lanceFinal,
+    atingivel: true,
+    lucroEsperadoNoTeto: Math.round(metricasFinais.maiorLucroEsperado * 100) / 100,
+    capitalNecessarioNoTeto: Math.round(metricasFinais.capitalNecessario * 100) / 100,
+    roiObtidoNoTeto: Math.round(metricasFinais.roiObtido * 100) / 100,
+  }
 }
 
 export function calculateMetrics(inputs: CalculatorInputs) {
@@ -90,7 +307,13 @@ export function calculateMetrics(inputs: CalculatorInputs) {
     capitalNecessario > 0 ? (maiorLucroEsperado / capitalNecessario) * 100 : 0
   const roiEsperadoAnualizado =
     tempoMeses > 0 ? (roiEsperadoPeriodo * 12) / tempoMeses : roiEsperadoPeriodo
-  const lanceTeto = valorVendaComDesconto * 0.65
+
+  // Cálculo do Lance Teto inverso (substituindo percentual fixo de 65%)
+  const resultadoInverso = calcLanceTetoInverso(inputs)
+  const lanceTeto =
+    resultadoInverso.atingivel && resultadoInverso.lanceTeto !== null
+      ? resultadoInverso.lanceTeto
+      : null
 
   return {
     capital_necessario: Math.round(capitalNecessario * 100) / 100,
@@ -101,7 +324,9 @@ export function calculateMetrics(inputs: CalculatorInputs) {
     retorno_estimado: Math.round(retornoEstimado * 100) / 100,
     roi_esperado_periodo: Math.round(roiEsperadoPeriodo * 100) / 100,
     roi_esperado_anualizado: Math.round(roiEsperadoAnualizado * 100) / 100,
-    lance_teto: Math.round(lanceTeto * 100) / 100,
+    lance_teto: lanceTeto !== null ? Math.round(lanceTeto * 100) / 100 : null,
+    lance_teto_atingivel: resultadoInverso.atingivel,
+    lance_teto_motivo: resultadoInverso.motivo,
   }
 }
 

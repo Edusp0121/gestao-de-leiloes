@@ -193,7 +193,11 @@ export default function RelatorioFinal() {
     const roiEstimado =
       despesasEstimadas > 0 ? Math.round((lucroEstimado / despesasEstimadas) * 1000) / 10 : 0
     const roiReal = despesasReais > 0 ? Math.round((lucroReal / despesasReais) * 1000) / 10 : 0
-    const roiAlvo = toNum(op.roi_esperado_periodo) || roiEstimado
+    // Meta de ROI: usa op.roi_alvo cadastrado, com fallback para op.roi_esperado_periodo ou roiEstimado
+    const roiAlvo =
+      op.roi_alvo != null && Number(op.roi_alvo) > 0
+        ? Number(op.roi_alvo)
+        : toNum(op.roi_esperado_periodo) || roiEstimado
     const bateuRoi = roiReal >= roiAlvo
 
     // Tempo em meses com 1 casa decimal
