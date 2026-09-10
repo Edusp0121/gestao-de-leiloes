@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, PlusCircle, Wallet, History, LogOut } from 'lucide-react'
+import { LayoutDashboard, PlusCircle, Wallet, History, KeyRound, LogOut } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
 import logoImg from '@/assets/logochamada-s-fundo-e6c10.png'
@@ -17,6 +17,7 @@ export function Sidebar({ onItemClick }: SidebarProps) {
     { label: 'Nova Análise', path: '/nova-analise', icon: PlusCircle },
     { label: 'Lançamentos', path: '/lancamentos', icon: Wallet },
     { label: 'Histórico', path: '/historico', icon: History },
+    { label: 'Alterar Senha', path: '/alterar-senha', icon: KeyRound },
   ]
 
   return (
@@ -56,22 +57,39 @@ export function Sidebar({ onItemClick }: SidebarProps) {
 
       <div className="p-4 border-t border-[#5C3A21] bg-[#22130A]">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 overflow-hidden">
+          <Link
+            to="/alterar-senha"
+            onClick={onItemClick}
+            title="Clique para gerenciar sua conta ou alterar senha"
+            className="flex items-center gap-3 overflow-hidden group flex-1 hover:opacity-90 transition-opacity"
+          >
             <div className="w-9 h-9 rounded-full bg-[#F97316] flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-inner">
               {user?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
             </div>
             <div className="truncate text-xs">
-              <p className="font-medium text-white truncate">{user?.name || 'Investidor'}</p>
+              <p className="font-medium text-white truncate group-hover:text-[#F97316] transition-colors">
+                {user?.name || 'Investidor'}
+              </p>
               <p className="text-[#E3CBB5] truncate">{user?.email}</p>
             </div>
+          </Link>
+          <div className="flex items-center gap-1 shrink-0">
+            <Link
+              to="/alterar-senha"
+              onClick={onItemClick}
+              title="Alterar Senha"
+              className="p-2 text-[#E3CBB5] hover:text-white hover:bg-[#5C3A21] rounded-lg transition-colors"
+            >
+              <KeyRound className="w-4 h-4" />
+            </Link>
+            <button
+              onClick={signOut}
+              title="Sair"
+              className="p-2 text-[#E3CBB5] hover:text-white hover:bg-[#5C3A21] rounded-lg transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
-          <button
-            onClick={signOut}
-            title="Sair"
-            className="p-2 text-[#E3CBB5] hover:text-white hover:bg-[#5C3A21] rounded-lg transition-colors shrink-0"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
         </div>
       </div>
     </aside>

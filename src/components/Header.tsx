@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { Menu, User } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -24,17 +25,23 @@ export function Header({ title, onOpenMobileMenu }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="hidden sm:flex flex-col items-end text-right">
-          <span className="text-sm font-semibold text-[#2D1B0E]">
-            {user?.name || 'Investidor de Leilões'}
-          </span>
-          <span className="text-xs text-[#7A6A5A]">Conta Ativa</span>
-        </div>
-        <Avatar className="h-9 w-9 border border-[#F97316] bg-[#5C3A21] text-white">
-          <AvatarFallback className="bg-[#5C3A21] text-white font-bold text-xs">
-            {user?.name?.slice(0, 2)?.toUpperCase() || <User className="h-4 w-4" />}
-          </AvatarFallback>
-        </Avatar>
+        <Link
+          to="/alterar-senha"
+          title="Minha Conta / Alterar Senha"
+          className="flex items-center gap-3 hover:opacity-85 transition-opacity"
+        >
+          <div className="hidden sm:flex flex-col items-end text-right">
+            <span className="text-sm font-semibold text-[#2D1B0E]">
+              {user?.name || 'Investidor de Leilões'}
+            </span>
+            <span className="text-xs text-[#7A6A5A]">Conta Ativa • Alterar Senha</span>
+          </div>
+          <Avatar className="h-9 w-9 border border-[#F97316] bg-[#5C3A21] text-white">
+            <AvatarFallback className="bg-[#5C3A21] text-white font-bold text-xs">
+              {user?.name?.slice(0, 2)?.toUpperCase() || <User className="h-4 w-4" />}
+            </AvatarFallback>
+          </Avatar>
+        </Link>
       </div>
     </header>
   )

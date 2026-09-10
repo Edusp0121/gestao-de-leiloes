@@ -15,6 +15,7 @@ export function Topbar() {
     if (path === '/nova-analise') return 'Nova Análise de Viabilidade'
     if (path === '/lancamentos') return 'Lançamentos de Despesas & Receitas'
     if (path === '/historico') return 'Histórico de Oportunidades'
+    if (path === '/alterar-senha') return 'Alterar Minha Senha'
     if (path.startsWith('/oportunidade/')) return 'Detalhe da Oportunidade'
     return 'Gestão de Leilões'
   }
@@ -38,12 +39,16 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white border border-[#EDE4D8] rounded-full shadow-subtle">
+        <a
+          href="/alterar-senha"
+          title="Minha Conta / Alterar Senha"
+          className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white border border-[#EDE4D8] rounded-full shadow-subtle hover:border-[#F97316] transition-colors"
+        >
           <User className="w-4 h-4 text-[#F97316]" />
           <span className="text-xs font-semibold text-[#5C3A21]">
             {user?.name || 'Investidor de Leilões'}
           </span>
-        </div>
+        </a>
       </div>
     </header>
   )

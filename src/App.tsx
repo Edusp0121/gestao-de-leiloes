@@ -16,6 +16,7 @@ import ChecklistOportunidade from '@/pages/ChecklistOportunidade'
 import RelatorioFinal from '@/pages/RelatorioFinal'
 import Lancamentos from '@/pages/Lancamentos'
 import Historico from '@/pages/Historico'
+import AlterarSenha from '@/pages/AlterarSenha'
 import NotFound from '@/pages/NotFound'
 
 const App = () => (
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/leilao/:id/relatorio" element={<RelatorioFinal />} />
             <Route path="/lancamentos" element={<Lancamentos />} />
             <Route path="/historico" element={<Historico />} />
+            <Route path="/alterar-senha" element={<AlterarSenha />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
