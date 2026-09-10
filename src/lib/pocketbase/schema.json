@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T14:23:15.937Z",
+  "generatedAt": "2026-09-10T15:07:34.373Z",
   "collections": [
     {
       "name": "users",
@@ -54,8 +54,8 @@
       "name": "oportunidades",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && (deleted_at = '' || @request.auth.admin = true)",
-        "view": "@request.auth.id != '' && (deleted_at = '' || @request.auth.admin = true)",
+        "list": "@request.auth.id != \"\" && (usuario = @request.auth.id || participantes ~ @request.auth.id || observadores ~ @request.auth.id || @request.auth.admin = true) && (deleted_at = \"\" || @request.auth.admin = true)",
+        "view": "@request.auth.id != \"\" && (usuario = @request.auth.id || participantes ~ @request.auth.id || observadores ~ @request.auth.id || @request.auth.admin = true) && (deleted_at = \"\" || @request.auth.admin = true)",
         "create": "@request.auth.id != ''",
         "update": "@request.auth.id != '' && (usuario = @request.auth.id || participantes ~ @request.auth.id || @request.auth.admin = true)",
         "delete": "@request.auth.id != '' && @request.auth.admin = true"
@@ -446,8 +446,8 @@
       "name": "lancamentos",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && (usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || oportunidade.observadores ~ @request.auth.id || @request.auth.admin = true || oportunidade.usuario = @request.auth.id)",
-        "view": "@request.auth.id != '' && (usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || oportunidade.observadores ~ @request.auth.id || @request.auth.admin = true || oportunidade.usuario = @request.auth.id)",
+        "list": "@request.auth.id != \"\" && (usuario = @request.auth.id || oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || oportunidade.observadores ~ @request.auth.id || @request.auth.admin = true)",
+        "view": "@request.auth.id != \"\" && (usuario = @request.auth.id || oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || oportunidade.observadores ~ @request.auth.id || @request.auth.admin = true)",
         "create": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || @request.auth.admin = true)",
         "update": "@request.auth.id != '' && (usuario = @request.auth.id || oportunidade.usuario = @request.auth.id || @request.auth.admin = true)",
         "delete": "@request.auth.id != '' && (usuario = @request.auth.id || oportunidade.usuario = @request.auth.id || @request.auth.admin = true)"
@@ -530,8 +530,8 @@
       "name": "checklists",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || oportunidade.observadores ~ @request.auth.id || @request.auth.admin = true)",
-        "view": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || oportunidade.observadores ~ @request.auth.id || @request.auth.admin = true)",
+        "list": "@request.auth.id != \"\" && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || oportunidade.observadores ~ @request.auth.id || @request.auth.admin = true)",
+        "view": "@request.auth.id != \"\" && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || oportunidade.observadores ~ @request.auth.id || @request.auth.admin = true)",
         "create": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || @request.auth.admin = true)",
         "update": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || @request.auth.admin = true)",
         "delete": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || @request.auth.admin = true)"
@@ -727,8 +727,8 @@
       "name": "fechamentos",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || oportunidade.observadores ~ @request.auth.id || @request.auth.admin = true)",
-        "view": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || oportunidade.observadores ~ @request.auth.id || @request.auth.admin = true)",
+        "list": "@request.auth.id != \"\" && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || oportunidade.observadores ~ @request.auth.id || @request.auth.admin = true)",
+        "view": "@request.auth.id != \"\" && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || oportunidade.observadores ~ @request.auth.id || @request.auth.admin = true)",
         "create": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || @request.auth.admin = true)",
         "update": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || @request.auth.admin = true)",
         "delete": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || @request.auth.admin = true)"
@@ -792,8 +792,8 @@
       "name": "fechamento_lancamentos",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || oportunidade.observadores ~ @request.auth.id || @request.auth.admin = true)",
-        "view": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || oportunidade.observadores ~ @request.auth.id || @request.auth.admin = true)",
+        "list": "@request.auth.id != \"\" && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || oportunidade.observadores ~ @request.auth.id || @request.auth.admin = true)",
+        "view": "@request.auth.id != \"\" && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || oportunidade.observadores ~ @request.auth.id || @request.auth.admin = true)",
         "create": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || @request.auth.admin = true)",
         "update": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || oportunidade.participantes ~ @request.auth.id || @request.auth.admin = true)",
         "delete": "@request.auth.id != '' && (oportunidade.usuario = @request.auth.id || @request.auth.admin = true)"
