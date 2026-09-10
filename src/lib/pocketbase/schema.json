@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-09T19:25:16.378Z",
+  "generatedAt": "2026-09-10T13:10:48.846Z",
   "collections": [
     {
       "name": "users",
@@ -39,8 +39,8 @@
           "autodateTriggers": ["onCreate", "onUpdate"]
         },
         {
-          "name": "deleted_at",
-          "type": "date",
+          "name": "admin",
+          "type": "bool",
           "required": false,
           "system": false
         }
