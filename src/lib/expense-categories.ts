@@ -290,3 +290,17 @@ export function isVendaReceita(descricao: string): boolean {
   const desc = (descricao || '').toLowerCase().trim()
   return VENDA_RECEITA_DESCRIPTIONS.some((r) => desc === r.toLowerCase())
 }
+
+/**
+ * Verifica se um lançamento é uma receita de aluguel/locação.
+ * Atende descrições como "Locação", "Aluguel", "Aluguel Temporário", etc.
+ */
+export function isAluguelReceita(lanc: {
+  tipo?: string
+  descricao?: string
+  categoria?: string
+}): boolean {
+  if (lanc.tipo !== 'Receita') return false
+  const desc = (lanc.descricao || '').toLowerCase().trim()
+  return desc.includes('locação') || desc.includes('locacao') || desc.includes('aluguel')
+}

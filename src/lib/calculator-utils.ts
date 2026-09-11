@@ -486,16 +486,15 @@ export function calcRetornoDinamico(
 /**
  * Retorno REAL de uma oportunidade:
  *
- *   Retorno Real = valorVendaRealUsado − (despesas reais + comissão de venda + saldo devedor)
+ *   Retorno Real = valorVendaRealUsado + receitasAluguel − (despesas reais + comissão de venda + saldo devedor)
  *
  * Onde:
  * - valorVendaRealUsado = op.valor_venda_real > 0 ? op.valor_venda_real : valorEstimadoVenda
+ * - receitasAluguel = soma das receitas de aluguel/locação lançadas na oportunidade
  * - despesas reais = soma de todos os lançamentos de despesa
- * - comissão de venda = comissao_corretor_percent% × valorVendaRealUsado
+ * - comissão de venda = comissão real lançada (quando houver despesa de comissão/corretagem/venda)
+ *   ou comissao_corretor_percent% (default 6%) × valorVendaRealUsado quando não houver lançamento
  * - saldo devedor = saldo devedor calculado
- *
- * Lançamentos de receita (Sinal, Saldo, parcelas, etc.) são apenas fluxo de caixa
- * e NÃO entram no cálculo do Retorno Real.
  */
 export function calcRetornoReal(
   op: {
@@ -513,20 +512,33 @@ export function calcRetornoReal(
     indice_correcao_medio_mensal?: number | string | null
   },
   despesasReais: number = 0,
+  receitasAluguel: number = 0,
+  comissaoRealLancada?: number | null,
 ): number {
   const valorEstimadoVenda = toNum(op.valor_venda_com_desconto) || toNum(op.valor_mercado)
   const valorVendaRealCadastrado = toNum(op.valor_venda_real)
   const valorVendaRealUsado =
     valorVendaRealCadastrado > 0 ? valorVendaRealCadastrado : valorEstimadoVenda
 
-  const comissaoPercent =
-    op.comissao_corretor_percent != null && op.comissao_corretor_percent !== ''
-      ? toNum(op.comissao_corretor_percent)
-      : 6
-  const comissaoVenda = (comissaoPercent / 100) * valorVendaRealUsado
+  // Regra de comissão: se houver comissão real lançada, prevalece e o percentual é descartado;
+  // caso contrário usa o percentual (default 6%) sobre o valor de venda real usado.
+  let comissaoVenda: number
+  if (comissaoRealLancada != null && toNum(comissaoRealLancada) > 0) {
+    comissaoVenda = toNum(comissaoRealLancada)
+  } else {
+    const comissaoPercent =
+      op.comissao_corretor_percent != null && op.comissao_corretor_percent !== ''
+        ? toNum(op.comissao_corretor_percent)
+        : 6
+    comissaoVenda = (comissaoPercent / 100) * valorVendaRealUsado
+  }
+
   const saldoDevedor = calcSaldoDevedorFinanciamento(op)
 
-  const retorno = valorVendaRealUsado - (toNum(despesasReais) + comissaoVenda + saldoDevedor)
+  const retorno =
+    valorVendaRealUsado +
+    toNum(receitasAluguel) -
+    (toNum(despesasReais) + comissaoVenda + saldoDevedor)
   return Math.round(retorno * 100) / 100
 }
 

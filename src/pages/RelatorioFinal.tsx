@@ -51,7 +51,14 @@ import {
   ExpenseCategory,
   getEstimatedCostsByCategory,
 } from '@/lib/expense-categories'
-import { toNum, calcRetornoDinamico, calcSaldoDevedorFinanciamento } from '@/lib/calculator-utils'
+import {
+  toNum,
+  calcRetornoDinamico,
+  calcSaldoDevedorFinanciamento,
+  calcRetornoReal,
+} from '@/lib/calculator-utils'
+import { isAluguelReceita } from '@/lib/expense-categories'
+import { getLancamentos, type Lancamento } from '@/services/lancamentos'
 import { useToast } from '@/hooks/use-toast'
 
 const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
@@ -69,20 +76,23 @@ export default function RelatorioFinal() {
   const [checklist, setChecklist] = useState<Checklist | null>(null)
   const [fechamento, setFechamento] = useState<Fechamento | null>(null)
   const [lancamentos, setLancamentos] = useState<FechamentoLancamento[]>([])
+  const [rawLancamentos, setRawLancamentos] = useState<Lancamento[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!id) return
     async function carregarDados() {
       try {
-        const [opData, checkData, fechData] = await Promise.all([
+        const [opData, checkData, fechData, rawLans] = await Promise.all([
           getOportunidade(id!),
           getChecklistByOportunidade(id!),
           getFechamentoByOportunidade(id!),
+          getLancamentos(id!),
         ])
         setOp(opData)
         setChecklist(checkData)
         setFechamento(fechData)
+        setRawLancamentos(rawLans)
 
         if (fechData) {
           const lans = await getFechamentoLancamentos(fechData.id)
@@ -184,10 +194,17 @@ export default function RelatorioFinal() {
       toNum(realByCategory.Desocupação) +
       toNum(realByCategory.Mensais)
 
-    // Lucro = Venda - (Despesas + Comissão + Saldo Devedor)
+    // Receitas de aluguel/locação da oportunidade
+    const totalReceitasAluguel = rawLancamentos
+      .filter((l) => isAluguelReceita(l))
+      .reduce((acc, l) => acc + toNum(l.valor), 0)
+
+    // Lucro = Venda + Aluguel - (Despesas + Comissão + Saldo Devedor)
     const lucroEstimado = calcRetornoDinamico(op)
     const lucroReal =
-      Math.round((vendaReal - (despesasReais + comissaoReal + saldoDevedor)) * 100) / 100
+      Math.round(
+        (vendaReal + totalReceitasAluguel - (despesasReais + comissaoReal + saldoDevedor)) * 100,
+      ) / 100
 
     // ROI = (Lucro / Despesas) * 100
     const roiEstimado =
@@ -224,6 +241,7 @@ export default function RelatorioFinal() {
       saldoDevedor,
       comissaoEstimada,
       comissaoReal,
+      receitasAluguel: totalReceitasAluguel,
       lucroEstimado,
       lucroReal,
       roiEstimado,
@@ -234,7 +252,7 @@ export default function RelatorioFinal() {
       tempoRealMeses,
       bateuTempo,
     }
-  }, [op, fechamento, checklist, estimatedByCategory, realByCategory])
+  }, [op, fechamento, checklist, estimatedByCategory, realByCategory, rawLancamentos])
 
   // Gráfico de Barras Duplas (Comparativo de Venda, Lucro e Custos por Categoria)
   const barChartData = useMemo(() => {
@@ -519,6 +537,11 @@ export default function RelatorioFinal() {
               <span className="text-2xl font-black text-[#16A34A]">
                 {formatBRL(financeiro.lucroReal)}
               </span>
+              {financeiro.receitasAluguel > 0 && (
+                <span className="text-[10px] text-emerald-700 block mt-0.5 font-medium">
+                  Inclui {formatBRL(financeiro.receitasAluguel)} em receitas de aluguel
+                </span>
+              )}
             </div>
             <div className="mt-2 pt-2 border-t border-[#EDE4D8] flex items-center justify-between text-xs text-[#7A6A5A]">
               <span>Estimado:</span>

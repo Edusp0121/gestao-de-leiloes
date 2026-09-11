@@ -73,6 +73,7 @@ import {
   getRealCostsByCategory,
   categorizeExpense,
   isVendaReceita,
+  isAluguelReceita,
   type ExpenseCategory,
 } from '@/lib/expense-categories'
 import { Filter, Users } from 'lucide-react'
@@ -419,12 +420,29 @@ export default function OportunidadeDetalhe() {
   // ROI Estimado = (Retorno Estimado / Despesas Estimadas) × 100
   const roiEstimado = calcRoi(retornoEstimadoExibido, despesasEstimadasDivisor)
 
+  // Receitas de aluguel/locação da oportunidade
+  const totalReceitasAluguel = lancamentos
+    .filter((l) => isAluguelReceita(l))
+    .reduce((acc, l) => acc + toNum(l.valor), 0)
+
+  // Comissão de venda real lançada (categoria Venda, tipo Despesa)
+  const comissaoRealLancadaObj = lancamentos.find(
+    (l) =>
+      l.tipo === 'Despesa' &&
+      (l.categoria === 'Venda' ||
+        (l.descricao || '').toLowerCase().includes('corretagem') ||
+        (l.descricao || '').toLowerCase().includes('corretor')),
+  )
+  const comissaoRealLancada = comissaoRealLancadaObj ? toNum(comissaoRealLancadaObj.valor) : null
+
   // Retorno Real:
-  // Retorno Real = valorVendaRealUsado − (despesas reais + comissão de venda + saldo devedor)
+  // Retorno Real = valorVendaRealUsado + receitasAluguel − (despesas reais + comissão de venda + saldo devedor)
   // Onde valorVendaRealUsado = op.valor_venda_real > 0 ? op.valor_venda_real : valorEstimadoVenda
   const retornoRealCalculado = calcRetornoReal(
     { ...op, saldo_devedor: calculatedSaldoDevedor },
     totalDespesasReais,
+    totalReceitasAluguel,
+    comissaoRealLancada,
   )
   const retornoRealExibido = Math.round(retornoRealCalculado * 100) / 100
 
@@ -706,9 +724,11 @@ export default function OportunidadeDetalhe() {
               </div>
             </div>
             <p className="text-[11px] text-[#7A6A5A] pt-1">
-              {temVendaReal
-                ? `Venda Real (${formatBRL(valorVendaRealUsado)}) − Despesas (${formatBRL(despesasReaisDivisor)})`
-                : `Venda Estimada (${formatBRL(valorEstimadoVenda)}) − Despesas (${formatBRL(despesasReaisDivisor)})`}
+              {totalReceitasAluguel > 0
+                ? `${temVendaReal ? `Venda Real (${formatBRL(valorVendaRealUsado)})` : `Venda Estimada (${formatBRL(valorEstimadoVenda)})`} + Aluguel (${formatBRL(totalReceitasAluguel)}) − Despesas (${formatBRL(despesasReaisDivisor)})`
+                : temVendaReal
+                  ? `Venda Real (${formatBRL(valorVendaRealUsado)}) − Despesas (${formatBRL(despesasReaisDivisor)})`
+                  : `Venda Estimada (${formatBRL(valorEstimadoVenda)}) − Despesas (${formatBRL(despesasReaisDivisor)})`}
             </p>
           </CardContent>
         </Card>
