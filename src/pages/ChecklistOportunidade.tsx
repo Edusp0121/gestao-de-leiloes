@@ -263,8 +263,8 @@ export default function ChecklistOportunidade() {
       return (Number(op.dividas_iptu) || 0) > 0
     }
 
-    if (key === 'data_pagamento_escritura') {
-      // Financiado não faz escritura (o próprio contrato de financiamento tem força de escritura)
+    if (key === 'data_pagamento_escritura' || key === 'data_escritura_lavratura') {
+      // Financiado não faz escritura nem lavratura (o próprio contrato de financiamento tem força de escritura)
       const modalidade = op.modalidade_financiamento
       const isFinanciado =
         modalidade === 'SAC' ||
@@ -629,12 +629,14 @@ export default function ChecklistOportunidade() {
                                 {item.description && (
                                   <p className="text-xs text-[#7A6A5A] pl-4">
                                     {item.description}
-                                    {!applicable && item.key === 'data_pagamento_escritura' && (
-                                      <span className="block text-[#64748B] italic mt-0.5">
-                                        (Oportunidade financiada: o contrato do banco possui força
-                                        de escritura pública)
-                                      </span>
-                                    )}
+                                    {!applicable &&
+                                      (item.key === 'data_pagamento_escritura' ||
+                                        item.key === 'data_escritura_lavratura') && (
+                                        <span className="block text-[#64748B] italic mt-0.5">
+                                          (Oportunidade financiada: o contrato do banco possui força
+                                          de escritura pública)
+                                        </span>
+                                      )}
                                     {!applicable &&
                                       item.key === 'data_quitacao_divida_condominio' && (
                                         <span className="block text-[#64748B] italic mt-0.5">
