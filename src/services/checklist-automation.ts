@@ -47,8 +47,14 @@ export function getChecklistTargetField(
     if (desc.includes('itbi')) {
       return { field: 'data_pagamento_itbi' }
     }
+    if (desc.includes('lavratura')) {
+      return { field: 'data_escritura_lavratura' }
+    }
     if (desc.includes('escritura')) {
       return { field: 'data_pagamento_escritura' }
+    }
+    if (desc.includes('matrícula') || desc.includes('matricula')) {
+      return { field: 'data_matricula_registrada' }
     }
     if (
       desc.includes('registro') ||
@@ -73,6 +79,19 @@ export function getChecklistTargetField(
 
   // Despesa - Mensais
   if (cat.includes('mensa')) {
+    if (
+      desc.includes('quitação') ||
+      desc.includes('quitacao') ||
+      desc.includes('dívida') ||
+      desc.includes('divida')
+    ) {
+      if (desc.includes('condomínio') || desc.includes('condominio')) {
+        return { field: 'data_quitacao_divida_condominio' }
+      }
+      if (desc.includes('iptu')) {
+        return { field: 'data_quitacao_divida_iptu' }
+      }
+    }
     if (desc.includes('condomínio') || desc.includes('condominio')) {
       return { field: 'data_inicio_pagamento_condominio' }
     }
@@ -92,11 +111,30 @@ export function getChecklistTargetField(
   if (desc.includes('itbi')) {
     return { field: 'data_pagamento_itbi' }
   }
+  if (desc.includes('lavratura')) {
+    return { field: 'data_escritura_lavratura' }
+  }
   if (desc.includes('escritura')) {
     return { field: 'data_pagamento_escritura' }
   }
+  if (desc.includes('matrícula') || desc.includes('matricula')) {
+    return { field: 'data_matricula_registrada' }
+  }
   if (desc.includes('registro') || desc.includes('averbação') || desc.includes('averbacao')) {
     return { field: 'data_pagamento_registro_averbacao' }
+  }
+  if (
+    desc.includes('quitação') ||
+    desc.includes('quitacao') ||
+    desc.includes('dívida') ||
+    desc.includes('divida')
+  ) {
+    if (desc.includes('condomínio') || desc.includes('condominio')) {
+      return { field: 'data_quitacao_divida_condominio' }
+    }
+    if (desc.includes('iptu')) {
+      return { field: 'data_quitacao_divida_iptu' }
+    }
   }
   if (desc.includes('condomínio') || desc.includes('condominio')) {
     return { field: 'data_inicio_pagamento_condominio' }

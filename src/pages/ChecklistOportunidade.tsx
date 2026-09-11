@@ -66,11 +66,15 @@ export default function ChecklistOportunidade() {
     data_carta_arrematacao: '',
     data_pagamento_itbi: '',
     data_pagamento_escritura: '',
+    data_escritura_lavratura: '',
     data_pagamento_registro_averbacao: '',
+    data_matricula_registrada: '',
     data_alteracao_dados_prefeitura: '',
     data_alteracao_dados_condominio: '',
     data_inicio_pagamento_condominio: '',
     data_inicio_pagamento_iptu: '',
+    data_quitacao_divida_condominio: '',
+    data_quitacao_divida_iptu: '',
     data_notificacao_ocupante: '',
     data_contato_ocupante: '',
     data_processo_imissao_posse: '',
@@ -122,8 +126,14 @@ export default function ChecklistOportunidade() {
           data_pagamento_escritura: checkData.data_pagamento_escritura
             ? checkData.data_pagamento_escritura.slice(0, 10)
             : '',
+          data_escritura_lavratura: checkData.data_escritura_lavratura
+            ? checkData.data_escritura_lavratura.slice(0, 10)
+            : '',
           data_pagamento_registro_averbacao: checkData.data_pagamento_registro_averbacao
             ? checkData.data_pagamento_registro_averbacao.slice(0, 10)
+            : '',
+          data_matricula_registrada: checkData.data_matricula_registrada
+            ? checkData.data_matricula_registrada.slice(0, 10)
             : '',
           data_alteracao_dados_prefeitura: checkData.data_alteracao_dados_prefeitura
             ? checkData.data_alteracao_dados_prefeitura.slice(0, 10)
@@ -136,6 +146,12 @@ export default function ChecklistOportunidade() {
             : '',
           data_inicio_pagamento_iptu: checkData.data_inicio_pagamento_iptu
             ? checkData.data_inicio_pagamento_iptu.slice(0, 10)
+            : '',
+          data_quitacao_divida_condominio: checkData.data_quitacao_divida_condominio
+            ? checkData.data_quitacao_divida_condominio.slice(0, 10)
+            : '',
+          data_quitacao_divida_iptu: checkData.data_quitacao_divida_iptu
+            ? checkData.data_quitacao_divida_iptu.slice(0, 10)
             : '',
           data_notificacao_ocupante: checkData.data_notificacao_ocupante
             ? checkData.data_notificacao_ocupante.slice(0, 10)
@@ -231,11 +247,42 @@ export default function ChecklistOportunidade() {
   }
 
   /**
+   * Determina se um item do checklist é aplicável para a oportunidade atual:
+   * - Quitação de Condomínio: apenas se dividas_condominio > 0
+   * - Quitação de IPTU: apenas se dividas_iptu > 0
+   * - Pagamento Escritura: apenas se a modalidade NÃO for financiada (ex: 'À Vista')
+   */
+  const isItemApplicable = (key: keyof ChecklistDates): boolean => {
+    if (!op) return true
+
+    if (key === 'data_quitacao_divida_condominio') {
+      return (Number(op.dividas_condominio) || 0) > 0
+    }
+
+    if (key === 'data_quitacao_divida_iptu') {
+      return (Number(op.dividas_iptu) || 0) > 0
+    }
+
+    if (key === 'data_pagamento_escritura') {
+      // Financiado não faz escritura (o próprio contrato de financiamento tem força de escritura)
+      const modalidade = op.modalidade_financiamento
+      const isFinanciado =
+        modalidade === 'SAC' ||
+        modalidade === 'PRICE' ||
+        (Boolean(modalidade) && modalidade !== 'À Vista')
+      return !isFinanciado
+    }
+
+    return true
+  }
+
+  /**
    * Itens da Timeline:
    * Separa itens que possuem data (organizados em ordem cronológica)
-   * e itens pendentes (sem data).
+   * e itens pendentes (sem data e aplicáveis).
+   * Itens inaplicáveis não entram nas pendências nem contam para o progresso.
    */
-  const { timelineItems, pendingItems, progressStats } = useMemo(() => {
+  const { timelineItems, pendingItems, progressStats, applicableKeys } = useMemo(() => {
     const withDate: Array<{
       item: ChecklistItemMeta
       dateStr: string
@@ -244,6 +291,7 @@ export default function ChecklistOportunidade() {
       toggleVal?: boolean
       toggleKey?: keyof ChecklistToggles
       toggleLabel?: string
+      isApplicable: boolean
     }> = []
 
     const withoutDate: Array<{
@@ -254,7 +302,14 @@ export default function ChecklistOportunidade() {
       toggleLabel?: string
     }> = []
 
+    const applicableKeysSet = new Set<keyof ChecklistDates>()
+
     CHECKLIST_ITEMS_CONFIG.forEach((item) => {
+      const applicable = isItemApplicable(item.key)
+      if (applicable) {
+        applicableKeysSet.add(item.key)
+      }
+
       const rawDate = formData[item.key]
       const hasToggle = Boolean(item.relatedToggleKey)
       const toggleVal = item.relatedToggleKey ? Boolean(formData[item.relatedToggleKey]) : undefined
@@ -273,8 +328,10 @@ export default function ChecklistOportunidade() {
           toggleVal,
           toggleKey: item.relatedToggleKey,
           toggleLabel: item.relatedToggleLabel,
+          isApplicable: applicable,
         })
-      } else {
+      } else if (applicable) {
+        // Apenas itens APLICÁVEIS entram na lista de pendentes
         withoutDate.push({
           item,
           hasToggle,
@@ -288,21 +345,24 @@ export default function ChecklistOportunidade() {
     // Ordenação cronológica (do mais antigo para o mais recente)
     withDate.sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime())
 
-    const total = CHECKLIST_ITEMS_CONFIG.length
-    const completed = withDate.length
-    const percent = Math.round((completed / total) * 100)
+    // O progresso conta apenas os itens aplicáveis
+    const totalApplicable = applicableKeysSet.size
+    const completedApplicable = withDate.filter((w) => w.isApplicable).length
+    const percent =
+      totalApplicable > 0 ? Math.round((completedApplicable / totalApplicable) * 100) : 100
 
     return {
       timelineItems: withDate,
       pendingItems: withoutDate,
+      applicableKeys: applicableKeysSet,
       progressStats: {
-        total,
-        completed,
+        total: totalApplicable,
+        completed: completedApplicable,
         pending: withoutDate.length,
         percent,
       },
     }
-  }, [formData])
+  }, [formData, op])
 
   const handleExportPDF = () => {
     window.print()
@@ -481,7 +541,7 @@ export default function ChecklistOportunidade() {
                 <div>
                   <CardTitle className="text-lg font-bold text-[#5C3A21] flex items-center gap-2">
                     <ListTodo className="w-5 h-5 text-[#F97316]" />
-                    Preenchimento do Checklist (23 Itens + 2 Decisões)
+                    Preenchimento do Checklist ({CHECKLIST_ITEMS_CONFIG.length} Itens + 2 Decisões)
                   </CardTitle>
                   <CardDescription className="text-xs text-[#7A6A5A]">
                     Insira as datas das etapas concluídas para alimentar a timeline cronológica.
@@ -517,38 +577,76 @@ export default function ChecklistOportunidade() {
                       {itemsInCat.map((item) => {
                         const dateValue = formData[item.key] || ''
                         const hasDate = Boolean(dateValue)
+                        const applicable = isItemApplicable(item.key)
 
                         return (
                           <div
                             key={item.key}
                             className={`p-3.5 rounded-lg border transition-colors ${
-                              hasDate
-                                ? 'bg-[#F0FDF4]/60 border-[#BBF7D0]'
-                                : 'bg-white border-[#EDE4D8] hover:border-[#D4C5B5]'
+                              !applicable
+                                ? 'bg-[#F8FAFC] border-[#E2E8F0] opacity-90'
+                                : hasDate
+                                  ? 'bg-[#F0FDF4]/60 border-[#BBF7D0]'
+                                  : 'bg-white border-[#EDE4D8] hover:border-[#D4C5B5]'
                             }`}
                           >
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                               <div className="space-y-1 flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                   <span
                                     className={`w-2 h-2 rounded-full ${
-                                      hasDate ? 'bg-[#16A34A]' : 'bg-[#CBD5E1]'
+                                      !applicable
+                                        ? 'bg-[#94A3B8]'
+                                        : hasDate
+                                          ? 'bg-[#16A34A]'
+                                          : 'bg-[#CBD5E1]'
                                     }`}
                                   />
                                   <Label
                                     htmlFor={item.key}
-                                    className="font-semibold text-sm text-[#2D1B0E] cursor-pointer"
+                                    className={`font-semibold text-sm cursor-pointer ${
+                                      !applicable ? 'text-[#64748B]' : 'text-[#2D1B0E]'
+                                    }`}
                                   >
                                     {item.label}
                                   </Label>
-                                  {hasDate && (
+
+                                  {!applicable && (
+                                    <Badge
+                                      variant="secondary"
+                                      className="bg-[#E2E8F0] text-[#475569] border border-[#CBD5E1] text-[10px] h-5 px-2 font-medium"
+                                    >
+                                      Não se aplica
+                                    </Badge>
+                                  )}
+
+                                  {applicable && hasDate && (
                                     <Badge className="bg-[#DCFCE7] text-[#166534] hover:bg-[#DCFCE7] text-[10px] h-5 border border-[#86EFAC] px-1.5 gap-0.5">
                                       <Check className="w-3 h-3" /> Concluído
                                     </Badge>
                                   )}
                                 </div>
                                 {item.description && (
-                                  <p className="text-xs text-[#7A6A5A] pl-4">{item.description}</p>
+                                  <p className="text-xs text-[#7A6A5A] pl-4">
+                                    {item.description}
+                                    {!applicable && item.key === 'data_pagamento_escritura' && (
+                                      <span className="block text-[#64748B] italic mt-0.5">
+                                        (Oportunidade financiada: o contrato do banco possui força
+                                        de escritura pública)
+                                      </span>
+                                    )}
+                                    {!applicable &&
+                                      item.key === 'data_quitacao_divida_condominio' && (
+                                        <span className="block text-[#64748B] italic mt-0.5">
+                                          (Não há dívida de condomínio declarada nesta oportunidade)
+                                        </span>
+                                      )}
+                                    {!applicable && item.key === 'data_quitacao_divida_iptu' && (
+                                      <span className="block text-[#64748B] italic mt-0.5">
+                                        (Não há dívida de IPTU declarada nesta oportunidade)
+                                      </span>
+                                    )}
+                                  </p>
                                 )}
                               </div>
 
@@ -558,17 +656,23 @@ export default function ChecklistOportunidade() {
                                     id={item.key}
                                     type="date"
                                     value={dateValue}
-                                    disabled={isObserver}
+                                    disabled={isObserver || !applicable}
                                     onChange={(e) => handleDateChange(item.key, e.target.value)}
                                     className={`w-40 sm:w-44 h-9 text-xs sm:text-sm font-medium print:hidden ${
-                                      hasDate
-                                        ? 'border-[#16A34A] text-[#166534] bg-white font-semibold'
-                                        : 'border-[#EDE4D8] text-[#5C3A21]'
+                                      !applicable
+                                        ? 'bg-[#F1F5F9] text-[#94A3B8] border-[#E2E8F0] cursor-not-allowed'
+                                        : hasDate
+                                          ? 'border-[#16A34A] text-[#166534] bg-white font-semibold'
+                                          : 'border-[#EDE4D8] text-[#5C3A21]'
                                     }`}
                                   />
                                   {/* Exibição em texto limpo na impressão */}
                                   <span className="hidden print:inline-block text-xs font-bold px-2 py-1 rounded bg-[#F8FAFC] border border-[#CBD5E1] text-[#2D1B0E]">
-                                    {hasDate ? formatDateDisplay(dateValue) : 'Não preenchido'}
+                                    {!applicable
+                                      ? 'Não se aplica'
+                                      : hasDate
+                                        ? formatDateDisplay(dateValue)
+                                        : 'Não preenchido'}
                                   </span>
                                 </div>
                                 {hasDate && !isObserver && (
@@ -784,7 +888,8 @@ export default function ChecklistOportunidade() {
 
                 {pendingItems.length === 0 ? (
                   <div className="p-3 bg-[#DCFCE7]/50 rounded-lg text-center text-xs text-[#166534] font-semibold border border-[#86EFAC]">
-                    Parabéns! Todos os 23 marcos do processo pós-arrematação foram registrados.
+                    Parabéns! Todos os {progressStats.total} marcos aplicáveis do processo
+                    pós-arrematação foram registrados.
                   </div>
                 ) : (
                   <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">

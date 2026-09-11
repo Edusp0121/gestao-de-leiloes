@@ -22,11 +22,15 @@ export interface ChecklistDates {
   data_carta_arrematacao?: string | null
   data_pagamento_itbi?: string | null
   data_pagamento_escritura?: string | null
+  data_escritura_lavratura?: string | null
   data_pagamento_registro_averbacao?: string | null
+  data_matricula_registrada?: string | null
   data_alteracao_dados_prefeitura?: string | null
   data_alteracao_dados_condominio?: string | null
   data_inicio_pagamento_condominio?: string | null
   data_inicio_pagamento_iptu?: string | null
+  data_quitacao_divida_condominio?: string | null
+  data_quitacao_divida_iptu?: string | null
   data_notificacao_ocupante?: string | null
   data_contato_ocupante?: string | null
   data_processo_imissao_posse?: string | null
@@ -111,42 +115,67 @@ export const CHECKLIST_ITEMS_CONFIG: ChecklistItemMeta[] = [
     description: 'Custas cartorárias da escritura (quando aplicável)',
   },
   {
+    key: 'data_escritura_lavratura',
+    label: '8. Escritura (lavratura)',
+    categoria: 'Aquisição & Documentação',
+    description: 'Lavratura e assinatura da escritura pública em cartório de notas',
+  },
+  {
     key: 'data_pagamento_registro_averbacao',
-    label: '8. Pagamento Registro/Averbação',
+    label: '9. Pagamento Registro/Averbação',
     categoria: 'Aquisição & Documentação',
     description: 'Prenotação e registro no Cartório de Registro de Imóveis (RGI)',
+  },
+  {
+    key: 'data_matricula_registrada',
+    label: '10. Matrícula Registrada',
+    categoria: 'Aquisição & Documentação',
+    description:
+      'Registro averbado na matrícula e certidão de ônus atualizada em nome do arrematante',
   },
 
   // Prefeitura & Condomínio
   {
     key: 'data_alteracao_dados_prefeitura',
-    label: '9. Alteração dados Prefeitura',
+    label: '11. Alteração dados Prefeitura',
     categoria: 'Prefeitura & Condomínio',
     description: 'Atualização cadastral do contribuinte no IPTU',
   },
   {
     key: 'data_alteracao_dados_condominio',
-    label: '10. Alteração dados Condomínio',
+    label: '12. Alteração dados Condomínio',
     categoria: 'Prefeitura & Condomínio',
     description: 'Atualização do cadastro junto à administradora do condomínio',
   },
   {
     key: 'data_inicio_pagamento_condominio',
-    label: '11. Início pagamento Condomínio',
+    label: '13. Início pagamento Condomínio',
     categoria: 'Prefeitura & Condomínio',
     description: 'Primeira cota condominial assumida pelo arrematante',
   },
   {
     key: 'data_inicio_pagamento_iptu',
-    label: '12. Início pagamento IPTU',
+    label: '14. Início pagamento IPTU',
     categoria: 'Prefeitura & Condomínio',
     description: 'Primeira parcela de IPTU assumida pelo arrematante',
+  },
+  {
+    key: 'data_quitacao_divida_condominio',
+    label: '15. Quitação de Dívida de Condomínio',
+    categoria: 'Prefeitura & Condomínio',
+    description: 'Pagamento/quitação de débitos anteriores de condomínio',
+  },
+  {
+    key: 'data_quitacao_divida_iptu',
+    label: '16. Quitação de Dívida de IPTU',
+    categoria: 'Prefeitura & Condomínio',
+    description: 'Pagamento/quitação de débitos pendentes de IPTU junto à Prefeitura',
   },
 
   // Desocupação & Posse
   {
     key: 'data_notificacao_ocupante',
-    label: '13. Notificação do Ocupante',
+    label: '17. Notificação do Ocupante',
     categoria: 'Desocupação & Posse',
     relatedToggleKey: 'desocupacao_amigavel',
     relatedToggleLabel: 'Desocupação Amigável?',
@@ -154,7 +183,7 @@ export const CHECKLIST_ITEMS_CONFIG: ChecklistItemMeta[] = [
   },
   {
     key: 'data_contato_ocupante',
-    label: '14. Contato com Ocupante',
+    label: '18. Contato com Ocupante',
     categoria: 'Desocupação & Posse',
     relatedToggleKey: 'ocupante_interesse_compra',
     relatedToggleLabel: 'Ocupante tem interesse na Compra',
@@ -162,13 +191,13 @@ export const CHECKLIST_ITEMS_CONFIG: ChecklistItemMeta[] = [
   },
   {
     key: 'data_processo_imissao_posse',
-    label: '15. Processo Imissão Posse',
+    label: '19. Processo Imissão Posse',
     categoria: 'Desocupação & Posse',
     description: 'Petição/mandado judicial de imissão na posse (se necessário)',
   },
   {
     key: 'data_imissao_posse',
-    label: '16. Imissão na Posse',
+    label: '20. Imissão na Posse',
     categoria: 'Desocupação & Posse',
     description: 'Data em que a posse do imóvel foi efetivamente obtida',
   },
@@ -176,13 +205,13 @@ export const CHECKLIST_ITEMS_CONFIG: ChecklistItemMeta[] = [
   // Reforma
   {
     key: 'data_inicio_reforma',
-    label: '17. Início Reforma',
+    label: '21. Início Reforma',
     categoria: 'Reforma',
     description: 'Início das obras de reparo/pintura/modernização',
   },
   {
     key: 'data_termino_reforma',
-    label: '18. Término Reforma',
+    label: '22. Término Reforma',
     categoria: 'Reforma',
     description: 'Entrega final da reforma e limpeza pós-obra',
   },
@@ -190,31 +219,31 @@ export const CHECKLIST_ITEMS_CONFIG: ChecklistItemMeta[] = [
   // Venda & Liquidação
   {
     key: 'data_divulgacao_venda',
-    label: '19. Divulgação para Venda',
+    label: '23. Divulgação para Venda',
     categoria: 'Venda & Recebimento',
     description: 'Fotos profissionais e publicação nos portais imobiliários',
   },
   {
     key: 'data_contrato_compra_venda',
-    label: '20. Contrato Compra e Venda',
+    label: '24. Contrato Compra e Venda',
     categoria: 'Venda & Recebimento',
     description: 'Assinatura do compromisso/promessa de compra e venda',
   },
   {
     key: 'data_recebimento_sinal',
-    label: '21. Recebimento de Sinal',
+    label: '25. Recebimento de Sinal',
     categoria: 'Venda & Recebimento',
     description: 'Entrada/arras creditada na conta',
   },
   {
     key: 'data_pagamento_financiamento',
-    label: '22. Pagamento do Financiamento',
+    label: '26. Pagamento do Financiamento',
     categoria: 'Venda & Recebimento',
     description: 'Quitação do saldo devedor do financiamento bancário',
   },
   {
     key: 'data_recebimento_saldo',
-    label: '23. Recebimento do Saldo',
+    label: '27. Recebimento do Saldo',
     categoria: 'Venda & Recebimento',
     description: 'Recebimento final do saldo da venda / repasse do banco',
   },

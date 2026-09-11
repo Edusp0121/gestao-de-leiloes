@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T15:07:34.373Z",
+  "generatedAt": "2026-09-11T15:09:04.987Z",
   "collections": [
     {
       "name": "users",
@@ -716,6 +716,30 @@
         },
         {
           "name": "data_imissao_posse",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_quitacao_divida_condominio",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_quitacao_divida_iptu",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_escritura_lavratura",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_matricula_registrada",
           "type": "date",
           "required": false,
           "system": false

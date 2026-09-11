@@ -1,54 +1,13 @@
 // checklist_notifications.js
-// Hook para disparo de e-mail ao completar 100% dos 23 itens de data do Checklist Pós-Arrematação
+// Hook para disparo de e-mail ao completar 100% dos itens aplicáveis do Checklist Pós-Arrematação
 
 onRecordUpdate((e) => {
-  const dateFields = [
-    'data_arremate',
-    'data_pagamento_lance',
-    'data_pagamento_leiloeiro',
-    'data_auto_arrematacao',
-    'data_carta_arrematacao',
-    'data_pagamento_itbi',
-    'data_pagamento_escritura',
-    'data_pagamento_registro_averbacao',
-    'data_alteracao_dados_prefeitura',
-    'data_alteracao_dados_condominio',
-    'data_inicio_pagamento_condominio',
-    'data_inicio_pagamento_iptu',
-    'data_notificacao_ocupante',
-    'data_contato_ocupante',
-    'data_processo_imissao_posse',
-    'data_imissao_posse',
-    'data_inicio_reforma',
-    'data_termino_reforma',
-    'data_divulgacao_venda',
-    'data_contrato_compra_venda',
-    'data_recebimento_sinal',
-    'data_pagamento_financiamento',
-    'data_recebimento_saldo',
-  ]
-
   // Verifica se o e-mail já foi notificado
   const alreadyNotified = e.record.getBool('email_notificado')
   if (alreadyNotified) {
     return e.next()
   }
 
-  // Verifica se todos os 23 campos de data estão preenchidos
-  let allFilled = true
-  for (let i = 0; i < dateFields.length; i++) {
-    const val = e.record.get(dateFields[i])
-    if (!val || val === '' || String(val).trim() === '') {
-      allFilled = false
-      break
-    }
-  }
-
-  if (!allFilled) {
-    return e.next()
-  }
-
-  // Se todos os campos estiverem preenchidos e ainda não foi notificado:
   try {
     const oportunidadeId = e.record.getString('oportunidade')
     if (!oportunidadeId) {
@@ -56,6 +15,59 @@ onRecordUpdate((e) => {
     }
 
     const opRecord = $app.findRecordById('oportunidades', oportunidadeId)
+    const modalidade = opRecord.getString('modalidade_financiamento')
+    const isFinanciado =
+      modalidade === 'SAC' ||
+      modalidade === 'PRICE' ||
+      (Boolean(modalidade) && modalidade !== 'À Vista')
+    const dividasCondominio = Number(opRecord.get('dividas_condominio')) || 0
+    const dividasIptu = Number(opRecord.get('dividas_iptu')) || 0
+
+    const dateFields = [
+      'data_arremate',
+      'data_pagamento_lance',
+      'data_pagamento_leiloeiro',
+      'data_auto_arrematacao',
+      'data_carta_arrematacao',
+      'data_pagamento_itbi',
+      // data_pagamento_escritura só é aplicável se NÃO financiado
+      ...(isFinanciado ? [] : ['data_pagamento_escritura']),
+      'data_escritura_lavratura',
+      'data_pagamento_registro_averbacao',
+      'data_matricula_registrada',
+      'data_alteracao_dados_prefeitura',
+      'data_alteracao_dados_condominio',
+      'data_inicio_pagamento_condominio',
+      'data_inicio_pagamento_iptu',
+      // Dívidas só aplicáveis se maiores que 0
+      ...(dividasCondominio > 0 ? ['data_quitacao_divida_condominio'] : []),
+      ...(dividasIptu > 0 ? ['data_quitacao_divida_iptu'] : []),
+      'data_notificacao_ocupante',
+      'data_contato_ocupante',
+      'data_processo_imissao_posse',
+      'data_imissao_posse',
+      'data_inicio_reforma',
+      'data_termino_reforma',
+      'data_divulgacao_venda',
+      'data_contrato_compra_venda',
+      'data_recebimento_sinal',
+      'data_pagamento_financiamento',
+      'data_recebimento_saldo',
+    ]
+
+    // Verifica se todos os campos de data aplicáveis estão preenchidos
+    let allFilled = true
+    for (let i = 0; i < dateFields.length; i++) {
+      const val = e.record.get(dateFields[i])
+      if (!val || val === '' || String(val).trim() === '') {
+        allFilled = false
+        break
+      }
+    }
+
+    if (!allFilled) {
+      return e.next()
+    }
     const opNome = opRecord.getString('nome') || 'Oportunidade de Leilão'
     const usuarioId = opRecord.getString('usuario')
 
@@ -87,7 +99,9 @@ onRecordUpdate((e) => {
         '<h2 style="color: #5c3a21; font-size: 18px; margin-top: 0;">Parabéns, ' +
         userName +
         '!</h2>' +
-        '<p>Informamos que todas as <strong>23 etapas</strong> do Checklist Pós-Arrematação da oportunidade <strong>' +
+        '<p>Informamos que todas as <strong>' +
+        dateFields.length +
+        ' etapas aplicáveis</strong> do Checklist Pós-Arrematação da oportunidade <strong>' +
         opNome +
         '</strong> foram concluídas com sucesso!</p>' +
         '<div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 16px; margin: 20px 0;">' +
