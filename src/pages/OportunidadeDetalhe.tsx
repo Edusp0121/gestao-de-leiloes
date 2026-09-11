@@ -468,6 +468,48 @@ export default function OportunidadeDetalhe() {
     return Math.round(capital * 100) / 100
   })()
 
+  // Capital Desembolsado: valor efetivamente desembolsado pelo usuário,
+  // ou seja, o total das despesas excluindo comissão de venda e IR sobre ganho de capital
+  // (pois estes valores são pagos com o resultado da venda).
+  // Se houver lançamentos reais de despesa, usa o critério real (despesas reais - comissão real - IR real).
+  // Caso contrário, usa o critério previsto/estimado (despesas estimadas - comissão estimada - IR estimado).
+  const temLancamentosDespesa = totalDespesasReais > 0
+
+  // Deduções reais (se lançadas entre as despesas)
+  const comissaoDespesaReal = comissaoRealLancada != null ? toNum(comissaoRealLancada) : 0
+  const irDespesaReal = lancamentos
+    .filter(
+      (l) =>
+        l.tipo === 'Despesa' &&
+        ((l.categoria === 'Encargos' &&
+          ((l.descricao || '').toLowerCase().includes('ir ') ||
+            (l.descricao || '').toLowerCase().includes('imposto de renda') ||
+            (l.descricao || '').toLowerCase().includes('ganho de capital'))) ||
+          (l.descricao || '').toLowerCase().includes('ir s/ ganho') ||
+          (l.descricao || '').toLowerCase().includes('ir sobre ganho')),
+    )
+    .reduce((acc, l) => acc + toNum(l.valor), 0)
+
+  // Deduções estimadas
+  const comissaoPercentEstimada =
+    op.comissao_corretor_percent != null && (op.comissao_corretor_percent as any) !== ''
+      ? toNum(op.comissao_corretor_percent)
+      : 6
+  const comissaoEstimadaValor = (comissaoPercentEstimada / 100) * valorEstimadoVenda
+  const irEstimadoValor = op.incluir_ir_despesas !== false ? toNum(op.ir_valor) : 0
+
+  // Se a comissão e o IR fizerem parte do total de despesas estimadas (ou das despesas reais),
+  // deduzimos. Em despesas estimadas (calcTotalDespesasEstimadas):
+  // Aquisição + Encargos + Desocupação + Mensais não incluem comissão de corretagem (categoria Venda).
+  // Mas caso despesas totais contenham esses valores ou se trate de despesas totais brutas,
+  // asseguramos que o capital desembolsado não embute corretagem de venda nem IR de ganho de capital.
+  const capitalDesembolsado = temLancamentosDespesa
+    ? Math.max(
+        0,
+        Math.round((totalDespesasReais - comissaoDespesaReal - irDespesaReal) * 100) / 100,
+      )
+    : Math.max(0, Math.round((totalInvestidoPrevisto - irEstimadoValor) * 100) / 100)
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -883,9 +925,22 @@ export default function OportunidadeDetalhe() {
               <span className="text-[#7A6A5A]">Taxa de Juros (anual):</span>
               <span className="font-semibold">{formatPercent(annualRate)}</span>
             </div>
-            <div className="flex justify-between py-1">
+            <div className="flex justify-between py-1 border-b border-[#EDE4D8]">
               <span className="text-[#7A6A5A]">Tempo Estimado Venda:</span>
               <span className="font-semibold">{op.tempo_estimado_venda_meses || 10} meses</span>
+            </div>
+            <div className="flex justify-between items-center py-1 bg-[#FFF4E8]/60 -mx-2 px-2 rounded mt-1">
+              <div className="flex flex-col">
+                <span className="font-semibold text-[#5C3A21]">Capital Desembolsado:</span>
+                <span className="text-[11px] text-[#7A6A5A]">
+                  {temLancamentosDespesa
+                    ? 'Total despesas reais − comissão − IR'
+                    : 'Total despesas estimadas − comissão − IR'}
+                </span>
+              </div>
+              <span className="font-bold text-base text-[#5C3A21]">
+                {formatBRL(capitalDesembolsado)}
+              </span>
             </div>
           </CardContent>
         </Card>
