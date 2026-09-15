@@ -13,8 +13,8 @@ export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
 export function categorizeExpense(descricao: string): ExpenseCategory {
   const desc = descricao.toLowerCase().trim()
 
-  // Aquisição: Sinal, Leiloeiro
-  if (desc.includes('sinal') || desc.includes('leiloeiro')) {
+  // Aquisição: Sinal, Leiloeiro, Consultoria
+  if (desc.includes('sinal') || desc.includes('leiloeiro') || desc.includes('consultoria')) {
     return 'Aquisição'
   }
 
@@ -261,7 +261,7 @@ export function getRealCostsByCategory(
 }
 
 export const CATEGORY_DESCRIPTIONS: Record<ExpenseCategory, string[]> = {
-  Aquisição: ['Sinal', 'Leiloeiro'],
+  Aquisição: ['Sinal', 'Leiloeiro', 'Consultoria'],
   Encargos: ['ITBI', 'Escritura', 'Registro', 'Averbação AF', 'Taxa de Avaliação', 'Despesas'],
   Desocupação: ['Acordo', 'Reforma', 'Honorários', 'Custas'],
   Mensais: ['Prestação', 'Condomínio', 'IPTU', 'Dívidas Condomínio', 'Dívidas IPTU'],

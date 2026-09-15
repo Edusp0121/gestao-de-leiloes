@@ -53,6 +53,8 @@ export function LancamentoFormModal({
   const [quemPagou, setQuemPagou] = useState('')
   const [participantes, setParticipantes] = useState<UserRef[]>([])
   const [loadingParticipantes, setLoadingParticipantes] = useState(false)
+  const [oportunidadeAtual, setOportunidadeAtual] = useState<any>(null)
+  const [valorEditadoManualmente, setValorEditadoManualmente] = useState(false)
   const { toast } = useToast()
 
   const descriptionOptions = useMemo(() => {
@@ -85,11 +87,13 @@ export function LancamentoFormModal({
   useEffect(() => {
     if (!open || !oportunidadeId) {
       setParticipantes([])
+      setOportunidadeAtual(null)
       return
     }
     setLoadingParticipantes(true)
     getOportunidade(oportunidadeId)
       .then(async (op) => {
+        setOportunidadeAtual(op)
         // Coleta participantes e usuario expandidos da oportunidade
         const expandedParts = Array.isArray(op.expand?.participantes)
           ? op.expand!.participantes
@@ -155,7 +159,10 @@ export function LancamentoFormModal({
 
         setParticipantes(result)
       })
-      .catch(() => setParticipantes([]))
+      .catch(() => {
+        setParticipantes([])
+        setOportunidadeAtual(null)
+      })
       .finally(() => setLoadingParticipantes(false))
   }, [open, oportunidadeId])
 
@@ -173,6 +180,8 @@ export function LancamentoFormModal({
         rawDate ? rawDate.split(' ')[0].split('T')[0] : new Date().toISOString().split('T')[0],
       )
       setQuemPagou(editLancamento.quem_pagou || '')
+      // Em edição, consideramos que o valor veio definido (manual)
+      setValorEditadoManualmente(true)
     } else if (open && !editLancamento) {
       setOportunidadeId(defaultOportunidadeId || '')
       setTipo('Despesa')
@@ -181,8 +190,27 @@ export function LancamentoFormModal({
       setValor('')
       setData(new Date().toISOString().split('T')[0])
       setQuemPagou('')
+      setValorEditadoManualmente(false)
     }
   }, [open, editLancamento, defaultOportunidadeId])
+
+  // Regra de pré-preenchimento e recálculo da Consultoria (5% do valor do arremate):
+  // Se categoria for 'Aquisição' e descrição for 'Consultoria', e o usuário NÃO tiver editado
+  // manualmente o valor, recalcula automaticamente 5% do valor do arremate.
+  const valorArrematacaoOp = Number(oportunidadeAtual?.valor_arrematacao) || 0
+  useEffect(() => {
+    if (!open) return
+    if (tipo === 'Despesa' && categoria === 'Aquisição' && descricao === 'Consultoria') {
+      if (!valorEditadoManualmente) {
+        if (valorArrematacaoOp > 0) {
+          const calc5Percent = (valorArrematacaoOp * 0.05).toFixed(2)
+          setValor(calc5Percent)
+        } else {
+          setValor('')
+        }
+      }
+    }
+  }, [open, tipo, categoria, descricao, valorArrematacaoOp, valorEditadoManualmente])
 
   // Define o valor padrão de "Quem Pagou":
   // - Lançamento antigo COM `quem_pagou`: mantém o valor salvo.
@@ -215,6 +243,24 @@ export function LancamentoFormModal({
   const handleCategoriaChange = (v: string) => {
     setCategoria(v)
     setDescricao('')
+    setValorEditadoManualmente(false)
+  }
+
+  const handleDescricaoChange = (v: string) => {
+    setDescricao(v)
+    if (v === 'Consultoria' && categoria === 'Aquisição') {
+      setValorEditadoManualmente(false)
+      const arremate = Number(oportunidadeAtual?.valor_arrematacao) || 0
+      if (arremate > 0) {
+        setValor((arremate * 0.05).toFixed(2))
+      }
+    }
+  }
+
+  const handleOportunidadeChange = (newOpId: string) => {
+    setOportunidadeId(newOpId)
+    // Se a descrição for Consultoria e não foi editada manualmente,
+    // o efeito de oportunidadeAtual irá recalcular com a nova oportunidade
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -283,7 +329,7 @@ export function LancamentoFormModal({
         <form onSubmit={handleSubmit} className="space-y-4 py-2">
           <div className="space-y-2">
             <Label>Oportunidade</Label>
-            <Select value={oportunidadeId} onValueChange={setOportunidadeId}>
+            <Select value={oportunidadeId} onValueChange={handleOportunidadeChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione a oportunidade" />
               </SelectTrigger>
@@ -336,7 +382,7 @@ export function LancamentoFormModal({
           )}
           <div className="space-y-2">
             <Label>Descrição</Label>
-            <Select value={descricao} onValueChange={setDescricao}>
+            <Select value={descricao} onValueChange={handleDescricaoChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione a descrição" />
               </SelectTrigger>
@@ -350,13 +396,27 @@ export function LancamentoFormModal({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Valor (R$)</Label>
+            <div className="flex items-center justify-between">
+              <Label>Valor (R$)</Label>
+              {categoria === 'Aquisição' && descricao === 'Consultoria' && (
+                <span className="text-[11px] text-[#F97316] font-medium">
+                  {valorEditadoManualmente
+                    ? 'Valor editado manualmente'
+                    : valorArrematacaoOp > 0
+                      ? '5% do arremate (automático)'
+                      : 'Oportunidade sem valor de arremate'}
+                </span>
+              )}
+            </div>
             <Input
               type="number"
               step="0.01"
               placeholder="0,00"
               value={valor}
-              onChange={(e) => setValor(e.target.value)}
+              onChange={(e) => {
+                setValor(e.target.value)
+                setValorEditadoManualmente(true)
+              }}
             />
           </div>
           {tipo === 'Despesa' && (
