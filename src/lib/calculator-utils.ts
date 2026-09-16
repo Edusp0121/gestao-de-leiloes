@@ -514,6 +514,7 @@ export function calcRetornoReal(
   despesasReais: number = 0,
   receitasAluguel: number = 0,
   comissaoRealLancada?: number | null,
+  saldoDevedorRealLancado?: number | null | boolean,
 ): number {
   const valorEstimadoVenda = toNum(op.valor_venda_com_desconto) || toNum(op.valor_mercado)
   const valorVendaRealCadastrado = toNum(op.valor_venda_real)
@@ -533,7 +534,15 @@ export function calcRetornoReal(
     comissaoVenda = (comissaoPercent / 100) * valorVendaRealUsado
   }
 
-  const saldoDevedor = calcSaldoDevedorFinanciamento(op)
+  // Regra de saldo devedor: se houver saldo devedor real lançado nas despesas reais,
+  // ele já está computado dentro de despesasReais; portanto, o saldo devedor adicional é ZERO
+  // para não descontar em dobro. Se não houver lançamento, desconta o saldo devedor estimado.
+  const temSaldoDevedorLancado =
+    typeof saldoDevedorRealLancado === 'boolean'
+      ? saldoDevedorRealLancado
+      : saldoDevedorRealLancado != null && toNum(saldoDevedorRealLancado) > 0
+
+  const saldoDevedor = temSaldoDevedorLancado ? 0 : calcSaldoDevedorFinanciamento(op)
 
   const retorno =
     valorVendaRealUsado +
@@ -829,8 +838,16 @@ export function calcRateioLucroPorSocioOp(
       : 6
   const comissaoVenda = valorVendaReal * (aliquotaComissao / 100)
 
-  // Saldo devedor
-  const saldoDevedor = calcSaldoDevedorFinanciamento(op)
+  // Detecção de saldo devedor real lançado nas despesas
+  const temSaldoDevedorLancado = (lancamentosOp || []).some(
+    (l: any) =>
+      l.tipo === 'Despesa' &&
+      ((l.categoria === 'Venda' && (l.descricao || '').toLowerCase().includes('saldo devedor')) ||
+        (l.descricao || '').toLowerCase().includes('saldo devedor')),
+  )
+
+  // Saldo devedor: se já lançado como despesa real, não desconta novamente
+  const saldoDevedor = temSaldoDevedorLancado ? 0 : calcSaldoDevedorFinanciamento(op)
 
   // Lucro do negócio = Venda Real − (Despesas Reais totais + Comissão de Venda + Saldo Devedor)
   const lucroDoNegocio =

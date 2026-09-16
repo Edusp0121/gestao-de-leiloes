@@ -429,11 +429,22 @@ export default function OportunidadeDetalhe() {
   const comissaoRealLancadaObj = lancamentos.find(
     (l) =>
       l.tipo === 'Despesa' &&
-      (l.categoria === 'Venda' ||
+      ((l.categoria === 'Venda' && !(l.descricao || '').toLowerCase().includes('saldo devedor')) ||
         (l.descricao || '').toLowerCase().includes('corretagem') ||
         (l.descricao || '').toLowerCase().includes('corretor')),
   )
   const comissaoRealLancada = comissaoRealLancadaObj ? toNum(comissaoRealLancadaObj.valor) : null
+
+  // Saldo Devedor real lançado (categoria Venda ou descrição contendo saldo devedor, tipo Despesa)
+  const saldoDevedorRealLancadoObj = lancamentos.find(
+    (l) =>
+      l.tipo === 'Despesa' &&
+      ((l.categoria === 'Venda' && (l.descricao || '').toLowerCase().includes('saldo devedor')) ||
+        (l.descricao || '').toLowerCase().includes('saldo devedor')),
+  )
+  const saldoDevedorRealLancado = saldoDevedorRealLancadoObj
+    ? toNum(saldoDevedorRealLancadoObj.valor)
+    : null
 
   // Retorno Real:
   // Retorno Real = valorVendaRealUsado + receitasAluguel − (despesas reais + comissão de venda + saldo devedor)
@@ -443,6 +454,7 @@ export default function OportunidadeDetalhe() {
     totalDespesasReais,
     totalReceitasAluguel,
     comissaoRealLancada,
+    saldoDevedorRealLancado,
   )
   const retornoRealExibido = Math.round(retornoRealCalculado * 100) / 100
 

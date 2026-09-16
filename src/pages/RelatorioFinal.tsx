@@ -179,7 +179,19 @@ export default function RelatorioFinal() {
     const comissaoEstimada = (comissaoPercent / 100) * vendaEstimada
     const comissaoReal = (comissaoPercent / 100) * vendaReal
 
-    const saldoDevedor = calcSaldoDevedorFinanciamento(op)
+    const saldoDevedorEstimado = calcSaldoDevedorFinanciamento(op)
+
+    // Detecção de saldo devedor real lançado
+    const saldoDevedorRealLancadoObj = rawLancamentos.find(
+      (l) =>
+        l.tipo === 'Despesa' &&
+        ((l.categoria === 'Venda' && (l.descricao || '').toLowerCase().includes('saldo devedor')) ||
+          (l.descricao || '').toLowerCase().includes('saldo devedor')),
+    )
+    const temSaldoDevedorLancado = Boolean(saldoDevedorRealLancadoObj)
+    const saldoDevedorReal = saldoDevedorRealLancadoObj
+      ? toNum(saldoDevedorRealLancadoObj.valor)
+      : saldoDevedorEstimado
 
     // Total de despesas (Aquisição + Encargos + Desocupação + Mensais)
     const despesasEstimadas =
@@ -199,11 +211,18 @@ export default function RelatorioFinal() {
       .filter((l) => isAluguelReceita(l))
       .reduce((acc, l) => acc + toNum(l.valor), 0)
 
-    // Lucro = Venda + Aluguel - (Despesas + Comissão + Saldo Devedor)
+    // Lucro = Venda + Aluguel - (Despesas + Comissão + Saldo Devedor Adicional)
+    // Se o saldo devedor foi lançado nas despesas reais (rawLancamentos), ele não deve ser descontado
+    // de novo no lucro real (já está pago/descontado nas despesas reais).
+    const saldoDevedorDeducaoReal = temSaldoDevedorLancado ? 0 : saldoDevedorEstimado
+
     const lucroEstimado = calcRetornoDinamico(op)
     const lucroReal =
       Math.round(
-        (vendaReal + totalReceitasAluguel - (despesasReais + comissaoReal + saldoDevedor)) * 100,
+        (vendaReal +
+          totalReceitasAluguel -
+          (despesasReais + comissaoReal + saldoDevedorDeducaoReal)) *
+          100,
       ) / 100
 
     // ROI = (Lucro / Despesas) * 100
@@ -238,7 +257,10 @@ export default function RelatorioFinal() {
       vendaReal,
       despesasEstimadas,
       despesasReais,
-      saldoDevedor,
+      saldoDevedor: saldoDevedorEstimado,
+      saldoDevedorEstimado,
+      saldoDevedorReal,
+      temSaldoDevedorLancado,
       comissaoEstimada,
       comissaoReal,
       receitasAluguel: totalReceitasAluguel,
@@ -433,8 +455,8 @@ export default function RelatorioFinal() {
       {
         item: 'Saldo Devedor / Quitação Financiamento',
         categoria: 'Mensais' as ExpenseCategory,
-        estimado: financeiro.saldoDevedor,
-        real: financeiro.saldoDevedor,
+        estimado: financeiro.saldoDevedorEstimado,
+        real: financeiro.saldoDevedorReal,
       },
     ]
 
