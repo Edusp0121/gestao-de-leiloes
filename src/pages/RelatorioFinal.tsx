@@ -57,7 +57,7 @@ import {
   calcSaldoDevedorFinanciamento,
   calcRetornoReal,
 } from '@/lib/calculator-utils'
-import { isAluguelReceita } from '@/lib/expense-categories'
+import { isAluguelReceita, isVendaReceita } from '@/lib/expense-categories'
 import { getLancamentos, type Lancamento } from '@/services/lancamentos'
 import { useToast } from '@/hooks/use-toast'
 
@@ -177,7 +177,19 @@ export default function RelatorioFinal() {
         ? toNum(op.comissao_corretor_percent)
         : 6
     const comissaoEstimada = (comissaoPercent / 100) * vendaEstimada
-    const comissaoReal = (comissaoPercent / 100) * vendaReal
+
+    const comissaoRealLancadaObj = rawLancamentos.find(
+      (l) =>
+        l.tipo === 'Despesa' &&
+        ((l.categoria === 'Venda' &&
+          !(l.descricao || '').toLowerCase().includes('saldo devedor')) ||
+          (l.descricao || '').toLowerCase().includes('corretagem') ||
+          (l.descricao || '').toLowerCase().includes('corretor')),
+    )
+    const temComissaoLancada = Boolean(comissaoRealLancadaObj)
+    const comissaoReal = comissaoRealLancadaObj
+      ? toNum(comissaoRealLancadaObj.valor)
+      : (comissaoPercent / 100) * vendaReal
 
     const saldoDevedorEstimado = calcSaldoDevedorFinanciamento(op)
 
@@ -200,6 +212,11 @@ export default function RelatorioFinal() {
       toNum(estimatedByCategory.Desocupação) +
       toNum(estimatedByCategory.Mensais)
 
+    // Total de despesas reais (todos os lançamentos de despesa, incluindo corretagem e saldo devedor quando lançados)
+    const totalDespesasReaisLancamentos = rawLancamentos
+      .filter((l) => l.tipo === 'Despesa' && !isVendaReceita(l.descricao))
+      .reduce((acc, l) => acc + toNum(l.valor), 0)
+
     const despesasReais =
       toNum(realByCategory.Aquisição) +
       toNum(realByCategory.Encargos) +
@@ -211,19 +228,15 @@ export default function RelatorioFinal() {
       .filter((l) => isAluguelReceita(l))
       .reduce((acc, l) => acc + toNum(l.valor), 0)
 
-    // Lucro = Venda + Aluguel - (Despesas + Comissão + Saldo Devedor Adicional)
-    // Se o saldo devedor foi lançado nas despesas reais (rawLancamentos), ele não deve ser descontado
-    // de novo no lucro real (já está pago/descontado nas despesas reais).
-    const saldoDevedorDeducaoReal = temSaldoDevedorLancado ? 0 : saldoDevedorEstimado
-
     const lucroEstimado = calcRetornoDinamico(op)
-    const lucroReal =
-      Math.round(
-        (vendaReal +
-          totalReceitasAluguel -
-          (despesasReais + comissaoReal + saldoDevedorDeducaoReal)) *
-          100,
-      ) / 100
+    // Paridade total com calcRetornoReal e com o card "Retorno Real"
+    const lucroReal = calcRetornoReal(
+      { ...op, valor_venda_real: vendaReal },
+      totalDespesasReaisLancamentos > 0 ? totalDespesasReaisLancamentos : despesasReais,
+      totalReceitasAluguel,
+      temComissaoLancada ? comissaoReal : null,
+      temSaldoDevedorLancado ? saldoDevedorReal : null,
+    )
 
     // ROI = (Lucro / Despesas) * 100
     const roiEstimado =

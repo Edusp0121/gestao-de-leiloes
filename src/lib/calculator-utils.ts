@@ -521,22 +521,19 @@ export function calcRetornoReal(
   const valorVendaRealUsado =
     valorVendaRealCadastrado > 0 ? valorVendaRealCadastrado : valorEstimadoVenda
 
-  // Regra de comissão: se houver comissão real lançada, prevalece e o percentual é descartado;
-  // caso contrário usa o percentual (default 6%) sobre o valor de venda real usado.
-  let comissaoVenda: number
-  if (comissaoRealLancada != null && toNum(comissaoRealLancada) > 0) {
-    comissaoVenda = toNum(comissaoRealLancada)
-  } else {
-    const comissaoPercent =
-      op.comissao_corretor_percent != null && op.comissao_corretor_percent !== ''
-        ? toNum(op.comissao_corretor_percent)
-        : 6
-    comissaoVenda = (comissaoPercent / 100) * valorVendaRealUsado
-  }
+  const temComissaoLancada =
+    typeof comissaoRealLancada === 'boolean'
+      ? comissaoRealLancada
+      : comissaoRealLancada != null && toNum(comissaoRealLancada) > 0
 
-  // Regra de saldo devedor: se houver saldo devedor real lançado nas despesas reais,
-  // ele já está computado dentro de despesasReais; portanto, o saldo devedor adicional é ZERO
-  // para não descontar em dobro. Se não houver lançamento, desconta o saldo devedor estimado.
+  const comissaoPercent =
+    op.comissao_corretor_percent != null && op.comissao_corretor_percent !== ''
+      ? toNum(op.comissao_corretor_percent)
+      : 6
+  const comissaoVendaDeducao = temComissaoLancada
+    ? 0
+    : (comissaoPercent / 100) * valorVendaRealUsado
+
   const temSaldoDevedorLancado =
     typeof saldoDevedorRealLancado === 'boolean'
       ? saldoDevedorRealLancado
@@ -547,7 +544,7 @@ export function calcRetornoReal(
   const retorno =
     valorVendaRealUsado +
     toNum(receitasAluguel) -
-    (toNum(despesasReais) + comissaoVenda + saldoDevedor)
+    (toNum(despesasReais) + comissaoVendaDeducao + saldoDevedor)
   return Math.round(retorno * 100) / 100
 }
 
@@ -831,12 +828,23 @@ export function calcRateioLucroPorSocioOp(
     .filter((l) => l.tipo === 'Despesa')
     .reduce((sum, l) => sum + toNum(l.valor), 0)
 
-  // Alíquota de comissão de venda
+  const comissaoLancadaObj = (lancamentosOp || []).find(
+    (l: any) =>
+      l.tipo === 'Despesa' &&
+      ((l.categoria === 'Venda' && !(l.descricao || '').toLowerCase().includes('saldo devedor')) ||
+        (l.descricao || '').toLowerCase().includes('corretagem') ||
+        (l.descricao || '').toLowerCase().includes('corretor')),
+  )
+  const temComissaoLancada = Boolean(comissaoLancadaObj)
+
   const aliquotaComissao =
     op.comissao_corretor_percent != null && (op.comissao_corretor_percent as unknown) !== ''
       ? toNum(op.comissao_corretor_percent)
       : 6
-  const comissaoVenda = valorVendaReal * (aliquotaComissao / 100)
+  const comissaoVendaDeducao = temComissaoLancada ? 0 : valorVendaReal * (aliquotaComissao / 100)
+  const comissaoVendaExibicao = temComissaoLancada
+    ? toNum(comissaoLancadaObj?.valor)
+    : valorVendaReal * (aliquotaComissao / 100)
 
   // Detecção de saldo devedor real lançado nas despesas
   const temSaldoDevedorLancado = (lancamentosOp || []).some(
@@ -851,7 +859,9 @@ export function calcRateioLucroPorSocioOp(
 
   // Lucro do negócio = Venda Real − (Despesas Reais totais + Comissão de Venda + Saldo Devedor)
   const lucroDoNegocio =
-    Math.round((valorVendaReal - (despesasReaisTotais + comissaoVenda + saldoDevedor)) * 100) / 100
+    Math.round(
+      (valorVendaReal - (despesasReaisTotais + comissaoVendaDeducao + saldoDevedor)) * 100,
+    ) / 100
 
   // Rateio das despesas pagas por sócio
   const rateioDespesas = calcRateioDespesasPorSocioOp(op, lancamentosOp, socios)
@@ -886,7 +896,7 @@ export function calcRateioLucroPorSocioOp(
     oportunidadeId: op.id,
     valorVendaReal: Math.round(valorVendaReal * 100) / 100,
     despesasReaisTotais: Math.round(despesasReaisTotais * 100) / 100,
-    comissaoVenda: Math.round(comissaoVenda * 100) / 100,
+    comissaoVenda: Math.round(comissaoVendaExibicao * 100) / 100,
     saldoDevedor: Math.round(saldoDevedor * 100) / 100,
     lucroDoNegocio,
     participantesCount: numParticipantes,
