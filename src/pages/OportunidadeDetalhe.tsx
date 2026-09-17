@@ -82,6 +82,7 @@ import {
   toNum,
   calcRetornoDinamico,
   calcRetornoReal,
+  calcRetornoRealCompleto,
   calcCapitalNecessario,
   calcInvestimentoTotalEstimado,
   calcInvestimentoTotalReal,
@@ -446,17 +447,12 @@ export default function OportunidadeDetalhe() {
     ? toNum(saldoDevedorRealLancadoObj.valor)
     : null
 
-  // Retorno Real:
-  // Retorno Real = valorVendaRealUsado + receitasAluguel − (despesas reais + comissão de venda + saldo devedor)
-  // Onde valorVendaRealUsado = op.valor_venda_real > 0 ? op.valor_venda_real : valorEstimadoVenda
-  const retornoRealCalculado = calcRetornoReal(
+  // Retorno Real: calculado via função única calcRetornoRealCompleto para garantir paridade total
+  const retornoRealInfo = calcRetornoRealCompleto(
     { ...op, saldo_devedor: calculatedSaldoDevedor },
-    totalDespesasReais,
-    totalReceitasAluguel,
-    comissaoRealLancada,
-    saldoDevedorRealLancado,
+    lancamentos,
   )
-  const retornoRealExibido = Math.round(retornoRealCalculado * 100) / 100
+  const retornoRealExibido = retornoRealInfo.retornoReal
 
   // Despesas Reais = soma dos lançamentos de despesa -> Divisor do ROI Real
   const despesasReaisDivisor = calcInvestimentoTotalReal(
@@ -488,7 +484,7 @@ export default function OportunidadeDetalhe() {
   const temLancamentosDespesa = totalDespesasReais > 0
 
   // Deduções reais (se lançadas entre as despesas)
-  const comissaoDespesaReal = comissaoRealLancada != null ? toNum(comissaoRealLancada) : 0
+  const comissaoDespesaReal = retornoRealInfo.comissaoRealLancadaValor
   const irDespesaReal = lancamentos
     .filter(
       (l) =>
@@ -778,11 +774,11 @@ export default function OportunidadeDetalhe() {
               </div>
             </div>
             <p className="text-[11px] text-[#7A6A5A] pt-1">
-              {totalReceitasAluguel > 0
-                ? `${temVendaReal ? `Venda Real (${formatBRL(valorVendaRealUsado)})` : `Venda Estimada (${formatBRL(valorEstimadoVenda)})`} + Aluguel (${formatBRL(totalReceitasAluguel)}) − Despesas (${formatBRL(despesasReaisDivisor)})`
-                : temVendaReal
-                  ? `Venda Real (${formatBRL(valorVendaRealUsado)}) − Despesas (${formatBRL(despesasReaisDivisor)})`
-                  : `Venda Estimada (${formatBRL(valorEstimadoVenda)}) − Despesas (${formatBRL(despesasReaisDivisor)})`}
+              {retornoRealInfo.totalReceitasAluguel > 0
+                ? `${retornoRealInfo.temVendaReal ? `Venda Real (${formatBRL(retornoRealInfo.valorVendaUsado)})` : `Venda Estimada (${formatBRL(retornoRealInfo.valorVendaUsado)})`} + Aluguel (${formatBRL(retornoRealInfo.totalReceitasAluguel)}) − Despesas (${formatBRL(despesasReaisDivisor)})`
+                : retornoRealInfo.temVendaReal
+                  ? `Venda Real (${formatBRL(retornoRealInfo.valorVendaUsado)}) − Despesas (${formatBRL(despesasReaisDivisor)})`
+                  : `Venda Estimada (${formatBRL(retornoRealInfo.valorVendaUsado)}) − Despesas (${formatBRL(despesasReaisDivisor)})`}
             </p>
           </CardContent>
         </Card>

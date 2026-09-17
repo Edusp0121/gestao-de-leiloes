@@ -56,6 +56,7 @@ import {
   calcRetornoDinamico,
   calcSaldoDevedorFinanciamento,
   calcRetornoReal,
+  calcRetornoRealCompleto,
 } from '@/lib/calculator-utils'
 import { isAluguelReceita, isVendaReceita } from '@/lib/expense-categories'
 import { getLancamentos, type Lancamento } from '@/services/lancamentos'
@@ -178,31 +179,20 @@ export default function RelatorioFinal() {
         : 6
     const comissaoEstimada = (comissaoPercent / 100) * vendaEstimada
 
-    const comissaoRealLancadaObj = rawLancamentos.find(
-      (l) =>
-        l.tipo === 'Despesa' &&
-        ((l.categoria === 'Venda' &&
-          !(l.descricao || '').toLowerCase().includes('saldo devedor')) ||
-          (l.descricao || '').toLowerCase().includes('corretagem') ||
-          (l.descricao || '').toLowerCase().includes('corretor')),
+    const retornoRealRes = calcRetornoRealCompleto(
+      { ...op, valor_venda_real: vendaReal },
+      rawLancamentos,
     )
-    const temComissaoLancada = Boolean(comissaoRealLancadaObj)
-    const comissaoReal = comissaoRealLancadaObj
-      ? toNum(comissaoRealLancadaObj.valor)
+
+    const saldoDevedorEstimado = retornoRealRes.saldoDevedorEstimado
+    const temComissaoLancada = retornoRealRes.temComissaoLancada
+    const comissaoReal = temComissaoLancada
+      ? retornoRealRes.comissaoRealLancadaValor
       : (comissaoPercent / 100) * vendaReal
 
-    const saldoDevedorEstimado = calcSaldoDevedorFinanciamento(op)
-
-    // Detecção de saldo devedor real lançado
-    const saldoDevedorRealLancadoObj = rawLancamentos.find(
-      (l) =>
-        l.tipo === 'Despesa' &&
-        ((l.categoria === 'Venda' && (l.descricao || '').toLowerCase().includes('saldo devedor')) ||
-          (l.descricao || '').toLowerCase().includes('saldo devedor')),
-    )
-    const temSaldoDevedorLancado = Boolean(saldoDevedorRealLancadoObj)
-    const saldoDevedorReal = saldoDevedorRealLancadoObj
-      ? toNum(saldoDevedorRealLancadoObj.valor)
+    const temSaldoDevedorLancado = retornoRealRes.temSaldoDevedorLancado
+    const saldoDevedorReal = temSaldoDevedorLancado
+      ? retornoRealRes.saldoDevedorRealLancadoValor
       : saldoDevedorEstimado
 
     // Total de despesas (Aquisição + Encargos + Desocupação + Mensais)
@@ -229,14 +219,7 @@ export default function RelatorioFinal() {
       .reduce((acc, l) => acc + toNum(l.valor), 0)
 
     const lucroEstimado = calcRetornoDinamico(op)
-    // Paridade total com calcRetornoReal e com o card "Retorno Real"
-    const lucroReal = calcRetornoReal(
-      { ...op, valor_venda_real: vendaReal },
-      totalDespesasReaisLancamentos > 0 ? totalDespesasReaisLancamentos : despesasReais,
-      totalReceitasAluguel,
-      temComissaoLancada ? comissaoReal : null,
-      temSaldoDevedorLancado ? saldoDevedorReal : null,
-    )
+    const lucroReal = retornoRealRes.retornoReal
 
     // ROI = (Lucro / Despesas) * 100
     const roiEstimado =

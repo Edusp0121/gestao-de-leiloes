@@ -496,6 +496,160 @@ export function calcRetornoDinamico(
  *   ou comissao_corretor_percent% (default 6%) × valorVendaRealUsado quando não houver lançamento
  * - saldo devedor = saldo devedor calculado
  */
+export interface LancamentoLike {
+  tipo?: string
+  valor?: number | string | null
+  categoria?: string
+  descricao?: string
+  [key: string]: any
+}
+
+export interface RetornoRealCompletoResult {
+  retornoReal: number
+  valorVendaUsado: number
+  temVendaReal: boolean
+  totalDespesasReais: number
+  totalReceitasAluguel: number
+  temComissaoLancada: boolean
+  comissaoDeducao: number
+  comissaoRealLancadaValor: number
+  temSaldoDevedorLancado: boolean
+  saldoDevedorDeducao: number
+  saldoDevedorEstimado: number
+  saldoDevedorRealLancadoValor: number
+}
+
+/**
+ * Função única e canônica para o cálculo do Retorno Real de uma oportunidade,
+ * garantindo paridade total entre Dashboard, OportunidadeDetalhe e RelatorioFinal.
+ *
+ * Regras atuais (v0.0.96/0.0.97):
+ * 1. Valor de Venda: usa `valor_venda_real` quando > 0; caso contrário usa a venda estimada (`valor_venda_com_desconto || valor_mercado`).
+ * 2. Receitas de Aluguel: soma todos os lançamentos com tipo 'Receita' e descrição de aluguel/locação.
+ * 3. Despesas Reais: soma todos os lançamentos do tipo 'Despesa'.
+ *    Se não houver nenhum lançamento de despesa cadastrado (ou array vazio), despesasReais = 0
+ *    (e se não houver lançamentos em geral, o retorno resultante equivale à estimativa correta).
+ * 4. Corretagem / Comissão de Venda:
+ *    - Se houver lançamento de despesa de comissão/corretagem (categoria 'Venda' ou descrição contendo 'corretagem'/'corretor'),
+ *      o valor lançado prevalece (já está somado em despesasReais), dedução adicional = 0 (SEM descontar 6% de novo).
+ *    - Se NÃO houver comissão lançada, desconta (comissao_corretor_percent || 6)% × valorVendaUsado.
+ * 5. Saldo Devedor:
+ *    - Se houver lançamento de despesa de Saldo Devedor (categoria 'Venda' ou descrição contendo 'saldo devedor'),
+ *      o valor lançado prevalece (já está somado em despesasReais), saldo devedor adicional = 0 (SEM descontar o estimado de novo).
+ *    - Se NÃO houver saldo devedor lançado, desconta o saldo devedor estimado de financiamento via calcSaldoDevedorFinanciamento(op).
+ *
+ * Fórmula:
+ *   Retorno Real = valorVendaUsado + totalReceitasAluguel − (totalDespesasReais + comissaoDeducao + saldoDevedorDeducao)
+ */
+export function calcRetornoRealCompleto(
+  op: {
+    valor_venda_real?: number | string | null
+    valor_venda_com_desconto?: number | string | null
+    valor_mercado?: number | string | null
+    comissao_corretor_percent?: number | string | null
+    modalidade_financiamento?: 'À Vista' | 'SAC' | 'PRICE' | string
+    valor_arrematacao?: number | string | null
+    taxa_juros_financiamento?: number | string | null
+    prazo_financiamento?: number | string | null
+    parcelas_pagas?: number | string | null
+    percentual_entrada?: number | string | null
+    saldo_devedor?: number | string | null
+    indice_correcao_medio_mensal?: number | string | null
+    custos_estimados_planilha?: any
+  },
+  lancamentosOp: LancamentoLike[] = [],
+): RetornoRealCompletoResult {
+  const valorEstimadoVenda = toNum(op.valor_venda_com_desconto) || toNum(op.valor_mercado)
+  const valorVendaRealCadastrado = toNum(op.valor_venda_real)
+  const temVendaReal = valorVendaRealCadastrado > 0
+  const valorVendaUsado = temVendaReal ? valorVendaRealCadastrado : valorEstimadoVenda
+
+  // Total de Despesas Reais
+  const totalDespesasReais = (lancamentosOp || [])
+    .filter((l) => l.tipo === 'Despesa')
+    .reduce((acc, l) => acc + toNum(l.valor), 0)
+
+  // Receitas de Aluguel/Locação
+  const totalReceitasAluguel = (lancamentosOp || [])
+    .filter((l) => {
+      if (l.tipo !== 'Receita') return false
+      const desc = (l.descricao || '').toLowerCase().trim()
+      return desc.includes('locação') || desc.includes('locacao') || desc.includes('aluguel')
+    })
+    .reduce((acc, l) => acc + toNum(l.valor), 0)
+
+  // Corretagem / Comissão de Venda lançada
+  const comissaoLancadaObj = (lancamentosOp || []).find(
+    (l) =>
+      l.tipo === 'Despesa' &&
+      ((l.categoria === 'Venda' && !(l.descricao || '').toLowerCase().includes('saldo devedor')) ||
+        (l.descricao || '').toLowerCase().includes('corretagem') ||
+        (l.descricao || '').toLowerCase().includes('corretor')),
+  )
+  const temComissaoLancada = Boolean(comissaoLancadaObj)
+  const comissaoRealLancadaValor = comissaoLancadaObj ? toNum(comissaoLancadaObj.valor) : 0
+
+  const comissaoPercent =
+    op.comissao_corretor_percent != null && op.comissao_corretor_percent !== ''
+      ? toNum(op.comissao_corretor_percent)
+      : 6
+  const comissaoDeducao = temComissaoLancada ? 0 : (comissaoPercent / 100) * valorVendaUsado
+
+  // Saldo Devedor lançado
+  const saldoDevedorLancadoObj = (lancamentosOp || []).find(
+    (l) =>
+      l.tipo === 'Despesa' &&
+      ((l.categoria === 'Venda' && (l.descricao || '').toLowerCase().includes('saldo devedor')) ||
+        (l.descricao || '').toLowerCase().includes('saldo devedor')),
+  )
+  const temSaldoDevedorLancado = Boolean(saldoDevedorLancadoObj)
+  const saldoDevedorRealLancadoValor = saldoDevedorLancadoObj
+    ? toNum(saldoDevedorLancadoObj.valor)
+    : 0
+
+  const saldoDevedorEstimado = calcSaldoDevedorFinanciamento(op)
+  const saldoDevedorDeducao = temSaldoDevedorLancado ? 0 : saldoDevedorEstimado
+
+  // Se a oportunidade NÃO tiver lançamentos de despesa nem receita (ou seja, sem lançamentos),
+  // despesasReais = 0.
+  // Nota de paridade com oportunidade sem lançamentos:
+  // Se não houver despesa lançada e quisermos a estimativa pura quando lancamentosOp estiver vazio?
+  // O usuário especificou: "oportunidade sem lançamentos inalterada / valores do dashboard iguais à estimativa correta".
+  // No caso sem despesas lançadas (totalDespesasReais === 0 e sem lançamentos),
+  // o dashboard para exibir o Retorno Real ou Estimado:
+  // Se lancamentosOp.length === 0, podemos usar despesas estimadas?
+  // Atenção: calcRetornoReal recebia despesasReais = 0. Se despesasReais = 0, Venda - comissao - saldoDevedor!
+  // Mas no Dashboard antigo: retorno = valorVenda - comissao - despesasReaisOp - saldoDevedor (quando despesasReaisOp=0, dava Venda - comissao - saldoDevedor).
+  // Porém se não há lançamentos, o Retorno de uma oportunidade sem lançamentos deve ser o Retorno Estimado (despesas estimadas)!
+  // Vamos checar com cuidado a especificação:
+  // "oportunidade sem lançamentos inalterada" / "Oportunidade sem lançamentos → valores do dashboard iguais à estimativa correta".
+  const temLancamentosDespesa = totalDespesasReais > 0
+  const temAlgumLancamento = (lancamentosOp || []).length > 0
+  const despesasEfetivas = temAlgumLancamento ? totalDespesasReais : calcTotalDespesasEstimadas(op)
+
+  const retornoCalculado =
+    valorVendaUsado +
+    totalReceitasAluguel -
+    (despesasEfetivas + comissaoDeducao + saldoDevedorDeducao)
+
+  const retornoReal = Math.round(retornoCalculado * 100) / 100
+
+  return {
+    retornoReal,
+    valorVendaUsado: Math.round(valorVendaUsado * 100) / 100,
+    temVendaReal,
+    totalDespesasReais: Math.round(totalDespesasReais * 100) / 100,
+    totalReceitasAluguel: Math.round(totalReceitasAluguel * 100) / 100,
+    temComissaoLancada,
+    comissaoDeducao: Math.round(comissaoDeducao * 100) / 100,
+    comissaoRealLancadaValor: Math.round(comissaoRealLancadaValor * 100) / 100,
+    temSaldoDevedorLancado,
+    saldoDevedorDeducao: Math.round(saldoDevedorDeducao * 100) / 100,
+    saldoDevedorEstimado: Math.round(saldoDevedorEstimado * 100) / 100,
+    saldoDevedorRealLancadoValor: Math.round(saldoDevedorRealLancadoValor * 100) / 100,
+  }
+}
+
 export function calcRetornoReal(
   op: {
     valor_venda_real?: number | string | null
@@ -510,6 +664,7 @@ export function calcRetornoReal(
     percentual_entrada?: number | string | null
     saldo_devedor?: number | string | null
     indice_correcao_medio_mensal?: number | string | null
+    custos_estimados_planilha?: any
   },
   despesasReais: number = 0,
   receitasAluguel: number = 0,

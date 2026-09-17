@@ -70,6 +70,7 @@ import {
   calcRateioDespesasPorSocioOp,
   calcRateioLucroPorSocioOp,
   getSociosParticipantesOp,
+  calcRetornoRealCompleto,
 } from '@/lib/calculator-utils'
 import { useAuth } from '@/hooks/use-auth'
 
@@ -215,20 +216,33 @@ export default function Dashboard() {
 
   const retornoEstimadoTotal = useMemo(
     () =>
-      oportunidades.reduce(
-        (acc, op) => acc + (op.retorno_estimado || op.maior_lucro_esperado || 0),
-        0,
-      ),
-    [oportunidades],
+      oportunidades.reduce((acc, op) => {
+        const opLans = lancamentos.filter((l) => l.oportunidade === op.id)
+        if (op.status === 'Vendida' || opLans.length > 0) {
+          const info = calcRetornoRealCompleto(op, opLans)
+          return acc + info.retornoReal
+        }
+        return acc + (op.retorno_estimado || op.maior_lucro_esperado || 0)
+      }, 0),
+    [oportunidades, lancamentos],
   )
 
   const roiMedio = useMemo(
     () =>
       oportunidades.length > 0
-        ? oportunidades.reduce((acc, op) => acc + (op.roi_esperado_periodo || 0), 0) /
-          oportunidades.length
+        ? oportunidades.reduce((acc, op) => {
+            const opLans = lancamentos.filter((l) => l.oportunidade === op.id)
+            if (op.status === 'Vendida' || opLans.length > 0) {
+              const info = calcRetornoRealCompleto(op, opLans)
+              const despesas =
+                info.totalDespesasReais > 0 ? info.totalDespesasReais : calcCapitalNecessario(op)
+              const roi = despesas > 0 ? (info.retornoReal / despesas) * 100 : 0
+              return acc + roi
+            }
+            return acc + (op.roi_esperado_periodo || 0)
+          }, 0) / oportunidades.length
         : 0,
-    [oportunidades],
+    [oportunidades, lancamentos],
   )
 
   const chartDataBar = oportunidades.map((op) => {
@@ -237,22 +251,18 @@ export default function Dashboard() {
       .filter((l) => l.tipo === 'Despesa')
       .reduce((acc, l) => acc + l.valor, 0)
 
-    // 1. Obter Venda Estimada (op.valor_venda_com_desconto || op.valor_mercado)
-    const valorVenda = Number(op.valor_venda_com_desconto) || Number(op.valor_mercado) || 0
-    // 2. Calcular Comissão Venda (Venda * (op.comissao_corretor_percent || 6) / 100)
-    const aliquotaComissao =
-      op.comissao_corretor_percent != null ? Number(op.comissao_corretor_percent) : 6
-    const comissaoVenda = valorVenda * (aliquotaComissao / 100)
-    // 3. Calcular Total Despesas Reais da oportunidade (soma dos lançamentos tipo Despesa) -> despesasReaisOp
-    // 4. Calcular Saldo Devedor Atual (usando calcSaldoDevedorFinanciamento(op))
-    const saldoDevedor = calcSaldoDevedorFinanciamento(op)
-    // 5. Retorno = Venda - Comissão - Despesas - Saldo Devedor
-    const retornoCalculado = valorVenda - comissaoVenda - despesasReaisOp - saldoDevedor
-    const retorno = Math.round(retornoCalculado * 100) / 100
+    // Retorno calculado via calcRetornoRealCompleto (garantindo paridade com Detalhe e Relatório Final)
+    const retornoInfo = calcRetornoRealCompleto(op, opLancamentos)
 
     // Investido reflete o cash outflow real/previsto (despesas reais ou estimadas das categorias),
     // sem somar o saldo devedor remanescente.
     const investido = despesasReaisOp > 0 ? despesasReaisOp : calcCapitalNecessario(op)
+    const retorno =
+      op.status === 'Vendida'
+        ? retornoInfo.retornoReal
+        : opLancamentos.length > 0
+          ? retornoInfo.retornoReal
+          : op.retorno_estimado || op.maior_lucro_esperado || retornoInfo.retornoReal
     return {
       name: op.nome.length > 15 ? op.nome.slice(0, 15) + '...' : op.nome,
       Investido: investido,
@@ -349,7 +359,7 @@ export default function Dashboard() {
         <Card className="bg-[#FFF4E8] border-[#EDE4D8] shadow-subtle hover:shadow-elevation transition-all">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-[#7A6A5A] uppercase tracking-wider">
-              Retorno Estimado
+              Retorno Total
             </CardTitle>
             <div className="p-2 bg-[#F97316] text-white rounded-lg">
               <TrendingUp className="w-4 h-4" />
@@ -359,14 +369,14 @@ export default function Dashboard() {
             <div className="text-2xl font-bold text-[#F97316]">
               {formatBRL(retornoEstimadoTotal)}
             </div>
-            <p className="text-xs text-[#7A6A5A] mt-1">Lucro total previsto</p>
+            <p className="text-xs text-[#7A6A5A] mt-1">Lucro consolidado da carteira</p>
           </CardContent>
         </Card>
 
         <Card className="bg-[#FFF4E8] border-[#EDE4D8] shadow-subtle hover:shadow-elevation transition-all">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-[#7A6A5A] uppercase tracking-wider">
-              ROI Médio Estimado
+              ROI Médio
             </CardTitle>
             <div className="p-2 bg-[#8B5A2B] text-white rounded-lg">
               <Percent className="w-4 h-4" />
@@ -375,7 +385,7 @@ export default function Dashboard() {
           <CardContent>
             <div className="text-2xl font-bold text-[#8B5A2B]">{formatPercent(roiMedio)}</div>
             <p className="text-xs text-[#7A6A5A] mt-1">Média por oportunidade</p>
-          </CardContent>
+          </CardContent>{' '}
         </Card>
       </div>
 
@@ -383,7 +393,7 @@ export default function Dashboard() {
         <Card className="lg:col-span-2 border-[#EDE4D8]">
           <CardHeader>
             <CardTitle className="text-base font-bold text-[#5C3A21]">
-              Investido vs Retorno Estimado por Oportunidade
+              Investido vs Retorno por Oportunidade
             </CardTitle>
           </CardHeader>
           <CardContent className="h-72">
@@ -525,6 +535,14 @@ export default function Dashboard() {
                     // apenas admin + dono.
                     const podeEditar = canEditOp(op)
                     const podeExcluir = canDeleteOp(op, lancamentos)
+                    const retornoRealInfo = calcRetornoRealCompleto(
+                      op,
+                      lancamentos.filter((l) => l.oportunidade === op.id),
+                    )
+                    const valorRetornoExibido =
+                      op.status === 'Vendida'
+                        ? retornoRealInfo.retornoReal
+                        : op.retorno_estimado || op.maior_lucro_esperado
                     return (
                       <TableRow
                         key={op.id}
@@ -552,10 +570,14 @@ export default function Dashboard() {
                           {formatBRL(totalGasto)}
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                          {formatBRL(op.valor_venda_com_desconto || op.valor_mercado)}
+                          {formatBRL(
+                            op.status === 'Vendida' && op.valor_venda_real
+                              ? op.valor_venda_real
+                              : op.valor_venda_com_desconto || op.valor_mercado,
+                          )}
                         </TableCell>
                         <TableCell className="text-right font-bold text-[#16A34A]">
-                          {formatBRL(op.retorno_estimado || op.maior_lucro_esperado)}
+                          {formatBRL(valorRetornoExibido)}
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-1">
