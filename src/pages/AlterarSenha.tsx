@@ -9,7 +9,10 @@ import {
   ShieldCheck,
   Eye,
   EyeOff,
+  Download,
+  Database,
 } from 'lucide-react'
+import { ExportDataModal } from '@/components/ExportDataModal'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -34,6 +37,8 @@ export default function AlterarSenha() {
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
+  const [exportModalOpen, setExportModalOpen] = useState(false)
+  const isAdmin = Boolean(user?.admin === true)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -288,6 +293,41 @@ export default function AlterarSenha() {
           </form>
         </CardContent>
       </Card>
+
+      {isAdmin && (
+        <Card className="border-[#EDE4D8] bg-white shadow-subtle">
+          <CardHeader className="border-b border-[#EDE4D8] bg-[#FAF7F2]/60 pb-4">
+            <CardTitle className="text-base font-bold text-[#5C3A21] flex items-center gap-2">
+              <Database className="w-5 h-5 text-[#F97316]" />
+              Administração do Sistema • Backup de Dados
+            </CardTitle>
+            <CardDescription className="text-xs text-[#7A6A5A]">
+              Recurso exclusivo para o administrador. Baixe os registros completos de todas as
+              coleções em arquivos JSON.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-5 space-y-4">
+            <p className="text-xs text-[#7A6A5A]">
+              O backup exporta 5 arquivos JSON (<code>oportunidades.json</code>,{' '}
+              <code>lancamentos.json</code>, <code>checklists.json</code>,{' '}
+              <code>fechamentos.json</code>, <code>fechamento_lancamentos.json</code>) contendo
+              todos os campos incluindo IDs e datas de criação.
+            </p>
+            <div>
+              <Button
+                type="button"
+                onClick={() => setExportModalOpen(true)}
+                className="bg-[#5C3A21] hover:bg-[#3D2314] text-white font-semibold gap-2 shadow-sm"
+              >
+                <Download className="w-4 h-4 text-[#F97316]" />
+                Exportar Dados do Sistema
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isAdmin && <ExportDataModal open={exportModalOpen} onOpenChange={setExportModalOpen} />}
     </div>
   )
 }

@@ -1,6 +1,16 @@
+import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, PlusCircle, Wallet, History, KeyRound, LogOut } from 'lucide-react'
+import {
+  LayoutDashboard,
+  PlusCircle,
+  Wallet,
+  History,
+  KeyRound,
+  LogOut,
+  Download,
+} from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
+import { ExportDataModal } from '@/components/ExportDataModal'
 import { cn } from '@/lib/utils'
 import logoImg from '@/assets/logochamada-s-fundo-e6c10.png'
 
@@ -11,6 +21,8 @@ interface SidebarProps {
 export function Sidebar({ onItemClick }: SidebarProps) {
   const location = useLocation()
   const { user, signOut } = useAuth()
+  const [exportModalOpen, setExportModalOpen] = useState(false)
+  const isAdmin = Boolean(user?.admin === true)
 
   const navItems = [
     { label: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -53,6 +65,21 @@ export function Sidebar({ onItemClick }: SidebarProps) {
             </Link>
           )
         })}
+
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => {
+              setExportModalOpen(true)
+              onItemClick?.()
+            }}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-[#E3CBB5] hover:bg-[#5C3A21] hover:text-white border border-[#5C3A21]/60 mt-2"
+            title="Exportar dados do sistema (JSON)"
+          >
+            <Download className="w-5 h-5 text-[#F97316]" />
+            <span>Exportar dados</span>
+          </button>
+        )}
       </nav>
 
       <div className="p-4 border-t border-[#5C3A21] bg-[#22130A]">
@@ -92,6 +119,8 @@ export function Sidebar({ onItemClick }: SidebarProps) {
           </div>
         </div>
       </div>
+
+      {isAdmin && <ExportDataModal open={exportModalOpen} onOpenChange={setExportModalOpen} />}
     </aside>
   )
 }
